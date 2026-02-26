@@ -117,7 +117,7 @@ def api_extremes():
             csv_path = os.path.join(BASE_DIR, 'index_values.csv')            
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path, index_col=0)
-                result = df.iloc[[-1]].to_dict(orient='index')
+                result = df.iloc[[-1]].to_dict(orient='records')
     elif input_type == 'point':
         point_vals = data.get('point', [])
         if len(point_vals) == 2:
@@ -125,7 +125,7 @@ def api_extremes():
             csv_path = os.path.join(BASE_DIR, 'index_values.csv')
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path, index_col=0)
-                result = df.iloc[[-1]].to_dict(orient='index')
+                result = df.iloc[[-1]].to_dict(orient='records')
     return jsonify(result)
 
 @app.route('/download/index_values.csv')

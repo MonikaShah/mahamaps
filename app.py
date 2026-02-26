@@ -48,7 +48,7 @@ def index():
         if function == 'rainfall_csv':
             if bbox:
                 rainfall(start_year, end_year, bbox)
-                return send_file('daily_rainfall.csv', as_attachment=True)
+                return send_file(os.path.join(BASE_DIR, 'daily_rainfall.csv'), as_attachment=True)
             else:
                 return "Bounding box required for rainfall CSV."
         elif function == 'extremes':

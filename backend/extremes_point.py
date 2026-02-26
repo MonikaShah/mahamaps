@@ -3,10 +3,12 @@ import numpy as np
 import pandas as pd
 import os
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def extremes_point(start_year, end_year, lon, lat):
     index_df = pd.DataFrame()
     for year in range(start_year, end_year + 1):
-        nc_file = f'data/RF25_ind{year}_rfp25.nc'
+        nc_file = os.path.join(BASE_DIR, 'data', f'RF25_ind{year}_rfp25.nc')
         if not os.path.exists(nc_file):
             print(f"Warning: {nc_file} not found. Skipping year {year}.")
             continue
@@ -62,6 +64,8 @@ def extremes_point(start_year, end_year, lon, lat):
         }
         index_df = pd.concat([index_df, pd.DataFrame(index_values, index=[year])])
         ds.close()
-    csv_path = 'index_values.csv'
+    csv_path = os.path.join(BASE_DIR, 'index_values.csv')
+
     write_header = not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0
+
     index_df.to_csv(csv_path, mode='a', header=write_header)

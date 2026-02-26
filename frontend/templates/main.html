@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precipitation Extremes App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        html, body { height: 100%; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f4f4f4; height: 100vh; }
+        .tabs { display: flex; background: #007bff; }
+        .tab { flex: 1; padding: 16px; color: #fff; text-align: center; cursor: pointer; font-weight: bold; }
+        .tab.active { background: #0056b3; }
+        .tab-content { display: none; height: calc(100vh - 48px); }
+        .tab-content.active { display: block; height: calc(100vh - 48px); }
+        #map { height: 100%; width: 100vw; position: absolute; top: 48px; left: 0; z-index: 1; }
+        .map-controls {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255,255,255,0.97);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            padding: 12px 16px 10px 16px;
+            min-width: 220px;
+        }
+        .map-controls label { font-size: 0.97em; margin-bottom: 2px; color: #333; text-align: left; display: block; }
+        .map-controls input, .map-controls select, .map-controls button {
+            width: 100%;
+            padding: 6px;
+            margin-bottom: 7px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 0.97em;
+        }
+        .map-controls button { background-color: #007bff; color: #fff; border: none; cursor: pointer; transition: background-color 0.3s; font-size: 1em; }
+        .map-controls button:hover { background-color: #0056b3; }
+        .download-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 4px;
+            margin-bottom: 0;
+            padding: 0;
+            vertical-align: middle;
+        }
+        .download-btn svg { width: 24px; height: 24px; fill: #007bff; transition: fill 0.2s; }
+        .download-btn:hover svg { fill: #0056b3; }
+        .input-group { margin-bottom: 8px; }
+        .popup-table { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); padding: 12px; }
+        .popup-table th, .popup-table td { padding: 4px 8px; }
+        .popup-table th { background: #007bff; color: #fff; }
+        .popup-table tr:nth-child(even) { background: #f4f4f4; }
+        .popup-table .popup-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .tab-content#content-download { padding: 0; }
+        .form-section { max-width: 400px; margin: 24px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 18px; }
+        .progress-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.25);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .progress-bar {
+            width: 180px;
+            height: 18px;
+            background: #eee;
+            border-radius: 9px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .progress-bar-inner {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+            animation: progress-anim 1.2s linear infinite;
+        }
+        @keyframes progress-anim {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        @media (max-width: 600px) {
+            .map-controls { left: 2vw; right: 2vw; min-width: unset; width: 90vw; padding: 8px; }
+        }
+    </style>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-providers/leaflet-providers.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+</head>
+<body>
+    <div class="tabs">
+        <div class="tab active" id="tab-map" onclick="showTab('map')">Explore Extremes on Map</div>
+        <div class="tab" id="tab-download" onclick="showTab('download')">Download Data</div>
+    </div>
+    <div class="progress-overlay" id="progress-overlay">
+        <div class="progress-bar"><div class="progress-bar-inner"></div></div>
+    </div>
+    <div class="tab-content active" id="content-map" style="position:relative;">
+        <div class="map-controls">
+            <label for="map_view">Map View:</label>
+            <select id="map_view" onchange="switchMapView()">
+                <option value="osm">Standard</option>
+                <option value="sat">Satellite</option>
+                <option value="terrain">Terrain</option>
+            </select>
+            <label for="map_start_year">Start Year:</label>
+            <input type="number" id="map_start_year" value="1901">
+            <label for="map_end_year">End Year:</label>
+            <input type="number" id="map_end_year" value="1950">
+            <label>Select a point on the map:</label>
+            <button onclick="getExtremesOnMap()" type="button">Show Extremes</button>
+        </div>
+        <div id="map"></div>
+    </div>
+    <div class="tab-content" id="content-download">
+        <div class="form-section">
+            <h1>Extreme Rainfall Analysis</h1>
+            <form action="/form" method="post" autocomplete="off">
+                <label for="function">Select Function:</label>
+                <select id="function" name="function">
+                    <option value="rainfall_csv">Download Rainfall CSV</option>
+                    <option value="extremes">Calculate Extremes</option>
+                    <option value="statistical_test">Perform Statistical Test</option>
+                    <option value="plots">Generate Plots</option>
+                    <option value="return_period_prob">Calculate Return Period Probability</option>
+                    <option value="daily_raster">Download Daily Raster</option>
+                    <option value="monthly_raster">Download Monthly Raster</option>
+                    <option value="yearly_raster">Download Yearly Raster</option>
+                </select>
+                <label>Input Type:</label>
+                <div class="input-group" style="display:flex;gap:10px;justify-content:left;align-items:center;">
+                    <input type="radio" id="bbox_type" name="input_type" value="bbox" checked onclick="toggleInputFields()">
+                    <label for="bbox_type" style="display:inline;margin:0 8px 0 2px;">Bounding Box</label>
+                    <input type="radio" id="point_type" name="input_type" value="point" onclick="toggleInputFields()">
+                    <label for="point_type" style="display:inline;margin:0 0 0 2px;">Point</label>
+                </div>
+                <div class="input-group" id="bbox-group">
+                    <label for="bbox">Bounding Box (min_lon, min_lat, max_lon, max_lat):</label>
+                    <input type="text" id="bbox" name="bbox" placeholder="-180,-90,180,90">
+                </div>
+                <div class="input-group" id="point-group" style="display:none;">
+                    <label for="point">Point (lon, lat):</label>
+                    <input type="text" id="point" name="point" placeholder="longitude,latitude">
+                </div>
+                <label for="start_year">Start Year:</label>
+                <input type="number" id="start_year" name="start_year" required>
+                <label for="end_year">End Year:</label>
+                <input type="number" id="end_year" name="end_year" required>
+                <label for="start_date">Start Date:</label>
+                <input type="date" id="start_date" name="start_date">
+                <label for="end_date">End Date:</label>
+                <input type="date" id="end_date" name="end_date">
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        // Tab switching
+        function showTab(tab) {
+            document.getElementById('tab-map').classList.remove('active');
+            document.getElementById('tab-download').classList.remove('active');
+            document.getElementById('content-map').classList.remove('active');
+            document.getElementById('content-download').classList.remove('active');
+            if(tab === 'map') {
+                document.getElementById('tab-map').classList.add('active');
+                document.getElementById('content-map').classList.add('active');
+            } else {
+                document.getElementById('tab-download').classList.add('active');
+                document.getElementById('content-download').classList.add('active');
+            }
+        }
+        // Download Data input toggle
+        function toggleInputFields() {
+            var type = document.querySelector('input[name="input_type"]:checked').value;
+            document.getElementById('bbox-group').style.display = (type === 'bbox') ? 'block' : 'none';
+            document.getElementById('point-group').style.display = (type === 'point') ? 'block' : 'none';
+        }
+        // Leaflet map setup
+        var map = L.map('map', { zoomControl: true }).setView([22, 78], 4.5);
+        // Add geocoder (search box)
+        var geocoder = L.Control.geocoder({
+            defaultMarkGeocode: false
+        })
+        .on('markgeocode', function(e) {
+            var bbox = e.geocode.bbox;
+            var center = e.geocode.center;
+            map.fitBounds(bbox);
+            // Optionally, drop a marker at the found location
+            if(window.drawnPoint) map.removeLayer(window.drawnPoint);
+            window.drawnPoint = L.marker(center).addTo(map).bindPopup(e.geocode.name).openPopup();
+        })
+        .addTo(map);
+        var baseLayers = {
+            'Standard': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }),
+            'Satellite': L.tileLayer.provider('Esri.WorldImagery'),
+            'Terrain': L.tileLayer.provider('Esri.WorldTopoMap')
+        };
+        baseLayers['Standard'].addTo(map);
+        function switchMapView() {
+            var view = document.getElementById('map_view').value;
+            map.eachLayer(function(layer) { map.removeLayer(layer); });
+            // Map dropdown value to baseLayers key
+            var key = '';
+            if(view === 'osm') key = 'Standard';
+            else if(view === 'sat') key = 'Satellite';
+            else if(view === 'terrain') key = 'Terrain';
+            if(baseLayers[key]) baseLayers[key].addTo(map);
+        }
+        var drawnPoint = null;
+        var lastCSVUrl = null;
+        var lastLocationName = '';
+        // Only allow point selection
+        map.on('click', function(e) {
+            if(drawnPoint) map.removeLayer(drawnPoint);
+            drawnPoint = L.marker(e.latlng).addTo(map);
+            // Reverse geocode for location name
+            fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + e.latlng.lat + '&lon=' + e.latlng.lng)
+              .then(resp => resp.json())
+              .then(geo => {
+                var name = geo.display_name || '';
+                drawnPoint.bindPopup('Selected Point: ' + e.latlng.lng.toFixed(3) + ', ' + e.latlng.lat.toFixed(3) + (name ? '<br><span style="font-size:0.95em;color:#555;">' + name + '</span>' : '')).openPopup();
+              })
+              .catch(() => {
+                drawnPoint.bindPopup('Selected Point: ' + e.latlng.lng.toFixed(3) + ', ' + e.latlng.lat.toFixed(3)).openPopup();
+              });
+        });
+        // Show/hide progress bar
+        function showProgress(show) {
+            document.getElementById('progress-overlay').style.display = show ? 'flex' : 'none';
+        }
+        // Show extremes (AJAX to backend)
+        function getExtremesOnMap() {
+            var startYear = document.getElementById('map_start_year').value;
+            var endYear = document.getElementById('map_end_year').value;
+            var latlng = null;
+            if(drawnPoint) {
+                latlng = drawnPoint.getLatLng();
+                var payload = { start_year: startYear, end_year: endYear, input_type: 'point', point: [parseFloat(latlng.lng), parseFloat(latlng.lat)] };
+                showProgress(true);
+                // Reverse geocode for location name
+                fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + latlng.lat + '&lon=' + latlng.lng)
+                  .then(resp => resp.json())
+                  .then(geo => { lastLocationName = geo.display_name || ''; })
+                  .catch(() => { lastLocationName = ''; })
+                  .finally(() => {
+                    fetch('/api/extremes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(response => {
+                        lastCSVUrl = '/index_values.csv?ts=' + Date.now();
+                        return response.json();
+                    })
+                    .then(data => {
+                        showProgress(false);
+                        showPopupTable(latlng, startYear, endYear, 'point', data, lastLocationName);
+                    })
+                    .catch(() => {
+                        showProgress(false);
+                        showPopupTable(latlng, startYear, endYear, 'point', null, lastLocationName);
+                    });
+                  });
+            } else {
+                alert('Please click on the map to select a point.');
+            }
+        }
+        // Download CSV
+        function downloadCSV() {
+            var url = '/download/index_values.csv?ts=' + Date.now();
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'index_values.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        // Popup table with real data and download button
+        function showPopupTable(latlng, startYear, endYear, type, data, locationName) {
+            var popupId = 'popup-' + Date.now();
+            var html = '<div class="popup-table">';
+            html += '<div class="popup-header" style="display:flex;align-items:center;justify-content:space-between;">';
+            html += '<b style="cursor:pointer;" onclick="togglePopupContent(\'' + popupId + '\')">Extremes Result <span id="' + popupId + '-arrow">&#9660;</span></b>';
+            html += '<button class="download-btn" title="Download CSV" onclick="downloadCSV()">';
+            html += '<svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18c-1.1 0-2 .9-2 2v8H8l4 4 4-4h-2V4c0-1.1-.9-2-2-2z"/></svg>';
+            html += '</button></div>';
+            html += '<div id="' + popupId + '-content">';
+            html += 'Type: ' + type + '<br>Year: ' + startYear + '-' + endYear + '<br>';
+            if(latlng) html += 'Location: ' + latlng.lng.toFixed(3) + ', ' + latlng.lat.toFixed(3);
+            if(locationName) html += '<br><span style="font-size:0.95em;color:#555;">' + locationName + '</span>';
+            html += '<br><br>';
+            html += '<table><tr><th>Index</th><th>Value</th></tr>';
+            if(data && Object.keys(data).length > 0) {
+                var row = Object.values(data)[0];
+                for(var key in row) {
+                    var val = row[key];
+                    if(typeof val === 'number') val = val.toFixed(2);
+                    html += '<tr><td>' + key + '</td><td>' + val + '</td></tr>';
+                }
+            } else {
+                html += '<tr><td colspan="2">No data available</td></tr>';
+            }
+            html += '</table>';
+            html += '</div></div>';
+            L.popup().setLatLng(latlng).setContent(html).openOn(map);
+        }
+
+        // Collapse/expand popup content
+        function togglePopupContent(popupId) {
+            var content = document.getElementById(popupId + '-content');
+            var arrow = document.getElementById(popupId + '-arrow');
+            if(content.style.display === 'none') {
+                content.style.display = '';
+                if(arrow) arrow.innerHTML = '&#9660;';
+            } else {
+                content.style.display = 'none';
+                if(arrow) arrow.innerHTML = '&#9654;';
+            }
+        }
+    </script>
+</body>
+</html>

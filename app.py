@@ -1,3 +1,4 @@
+import shutil
 from flask import Flask, render_template, request, send_file, jsonify, send_from_directory
 from shapely.geometry import box
 
@@ -14,7 +15,7 @@ import pandas as pd
 import os
 import tempfile
 
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, template_folder='frontend/templates')
 
 @app.route('/', methods=['GET'])
@@ -51,19 +52,22 @@ def index():
             else:
                 return "Bounding box required for rainfall CSV."
         elif function == 'extremes':
-            if os.path.exists('index_values.csv'):
-                os.remove('index_values.csv')
+            csv_path = os.path.join(BASE_DIR, 'index_values.csv')
+
+            if os.path.exists(csv_path):
+                os.remove(csv_path)
+            
             if bbox:
                 extremes(start_year, end_year, bbox)
-                return send_file('index_values.csv', as_attachment=True)
+                return send_file(os.path.join(BASE_DIR, 'index_values.csv'), as_attachment=True)
             elif point:
                 extremes_point(start_year, end_year, point[0], point[1])
-                return send_file('index_values.csv', as_attachment=True)
+                return send_file(os.path.join(BASE_DIR, 'index_values.csv'), as_attachment=True)
             else:
                 return "Please provide either a bounding box or a point."
         elif function == 'statistical_test':
             statistical_test()
-            return send_file('results_5.csv', as_attachment=True)
+            return send_file(os.path.join(BASE_DIR, 'results_5.csv'), as_attachment=True)
         elif function == 'plots':
             plots()
             return "Plots generated successfully"
@@ -94,8 +98,10 @@ def index():
 def api_extremes():
 
     # 🔥 REMOVE OLD FILE FIRST
-    if os.path.exists('index_values.csv'):
-        os.remove('index_values.csv')
+    csv_path = os.path.join(BASE_DIR, 'index_values.csv')
+
+    if os.path.exists(csv_path):
+        os.remove(csv_path)
 
 
     data = request.json
@@ -108,7 +114,7 @@ def api_extremes():
         if len(bbox_vals) == 4:
             bbox = box(*bbox_vals)
             extremes(start_year, end_year, bbox)
-            csv_path = 'index_values.csv'
+            csv_path = os.path.join(BASE_DIR, 'index_values.csv')            
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path, index_col=0)
                 result = df.iloc[[-1]].to_dict(orient='index')
@@ -116,7 +122,7 @@ def api_extremes():
         point_vals = data.get('point', [])
         if len(point_vals) == 2:
             extremes_point(start_year, end_year, point_vals[0], point_vals[1])
-            csv_path = 'index_values.csv'
+            csv_path = os.path.join(BASE_DIR, 'index_values.csv')
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path, index_col=0)
                 result = df.iloc[[-1]].to_dict(orient='index')
@@ -127,8 +133,11 @@ def download_index_values():
     # Move the file to a temp directory before sending
     import shutil
     temp_dir = tempfile.gettempdir()
+    csv_path = os.path.join(BASE_DIR, 'index_values.csv')
+
     temp_path = os.path.join(temp_dir, 'index_values.csv')
-    shutil.copyfile('index_values.csv', temp_path)
+    shutil.copyfile(csv_path, temp_path)
+
     return send_file(temp_path, as_attachment=True)
 
 if __name__ == '__main__':

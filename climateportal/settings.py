@@ -28,7 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'mahamaps.com',
     'www.mahamaps.com',
-    'localhost',
+   
     '127.0.0.1',
 ]
 

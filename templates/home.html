@@ -64,6 +64,16 @@
             border-radius: 8px;
             padding: 20px;
         }
+        .card-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .card-link:hover {
+            border-color: #0077b6;
+            box-shadow: 0 4px 12px rgba(0,119,182,0.15);
+        }
         .card h3 {
             margin: 0 0 8px 0;
             color: #0077b6;
@@ -117,10 +127,11 @@
     <h2>Welcome</h2>
     <p>Use this portal to explore climate data, precipitation extremes, and related analytics. Choose a topic from the menu above to get started.</p>
     <div class="cards">
-        <div class="card">
+        <a href="/precipitation/" class="card card-link">
             <h3>Precipitation</h3>
             <p>Explore extremes on the map, select points, and download data for extreme rainfall analysis.</p>
-        </div>
+            <p style="margin-top:8px;font-size:0.9em;color:#0077b6;">Go to Precipitation →</p>
+        </a>
         <div class="card">
             <h3>Rainfall</h3>
             <p>Rainfall tools and datasets (coming soon).</p>

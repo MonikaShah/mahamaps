@@ -94,8 +94,17 @@
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
+        @media (max-width: 768px) {
+            .portal-navbar { flex-wrap: wrap; gap: 10px; padding: 12px; }
+            .portal-navbar a { font-size: 0.95em; }
+            .tabs .tab { padding: 12px 8px; font-size: 0.9em; }
+            .portal-footer { padding: 20px 12px; }
+            .portal-footer a { display: inline-block; margin: 4px 8px; font-size: 0.9em; }
+            .form-section { margin: 16px 12px; padding: 16px; max-width: none; }
+        }
         @media (max-width: 600px) {
             .map-controls { left: 2vw; right: 2vw; min-width: unset; width: 90vw; padding: 8px; }
+            .map-controls button, .map-controls input, .map-controls select { min-height: 44px; }
         }
         .skip-link {
             position: absolute;

@@ -20,6 +20,10 @@ app = Flask(__name__, template_folder='frontend/templates')
 
 @app.route('/', methods=['GET'])
 def main():
+    return render_template('home.html')
+
+@app.route('/precipitation/', methods=['GET'])
+def precipitation():
     return render_template('main.html')
 
 @app.route('/form', methods=['GET', 'POST'])

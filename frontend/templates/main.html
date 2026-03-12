@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Precipitation Extremes App</title>
+    <title>Climate Data Analytics Portal</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
         * { box-sizing: border-box; }
@@ -138,7 +138,7 @@
     <div class="tab-content" id="content-download">
         <div class="form-section">
             <h1>Extreme Rainfall Analysis</h1>
-            <form action="/form" method="post" autocomplete="off">
+            <form action="/precipitation/form/" method="post" autocomplete="off">{% csrf_token %}
                 <label for="function">Select Function:</label>
                 <select id="function" name="function">
                     <option value="rainfall_csv">Download Rainfall CSV</option>
@@ -298,7 +298,7 @@
         }
         // Download CSV
         function downloadCSV() {
-            var url = '/download/index_values.csv?ts=' + Date.now();
+            var url = '/precipitation/download/index_values.csv?ts=' + Date.now();
             var a = document.createElement('a');
             a.href = url;
             a.download = 'index_values.csv';

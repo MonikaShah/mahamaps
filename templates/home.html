@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Climate Portal</title>
+    <title>Climate Data Analytics Portal</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -107,10 +107,52 @@
             font-size: 0.9em;
             opacity: 0.9;
         }
+        .skip-link {
+            position: absolute;
+            top: -100px;
+            left: 12px;
+            background: #004466;
+            color: white;
+            padding: 8px 12px;
+            z-index: 100;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .skip-link:focus {
+            top: 12px;
+        }
+        .hero-cta {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.25);
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 6px;
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+        .hero-cta:hover {
+            background: rgba(255,255,255,0.35);
+        }
+        .card.coming-soon {
+            opacity: 0.85;
+            position: relative;
+        }
+        .card.coming-soon .badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #6c757d;
+            color: white;
+            font-size: 0.75em;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-
+<a href="#main" class="skip-link">Skip to main content</a>
 <div class="navbar">
     <a href="/">Home</a>
     <a href="/precipitation/">Precipitation</a>
@@ -121,9 +163,10 @@
 <div class="hero">
     <h1>Climate Data Analytics Portal</h1>
     <p>Advanced precipitation and rainfall extreme analysis platform</p>
+    <a href="/precipitation/" class="hero-cta">Explore Precipitation →</a>
 </div>
 
-<div class="main">
+<main id="main" class="main">
     <h2>Welcome</h2>
     <p>Use this portal to explore climate data, precipitation extremes, and related analytics. Choose a topic from the menu above to get started.</p>
     <div class="cards">
@@ -132,16 +175,18 @@
             <p>Explore extremes on the map, select points, and download data for extreme rainfall analysis.</p>
             <p style="margin-top:8px;font-size:0.9em;color:#0077b6;">Go to Precipitation →</p>
         </a>
-        <div class="card">
+        <div class="card coming-soon">
+            <span class="badge">Coming soon</span>
             <h3>Rainfall</h3>
-            <p>Rainfall tools and datasets (coming soon).</p>
+            <p>Rainfall tools and datasets.</p>
         </div>
-        <div class="card">
+        <div class="card coming-soon">
+            <span class="badge">Coming soon</span>
             <h3>Temperature</h3>
-            <p>Temperature analysis and visualisation (coming soon).</p>
+            <p>Temperature analysis and visualisation.</p>
         </div>
     </div>
-</div>
+</main>
 
 <footer class="footer">
     <div class="footer-links">
@@ -149,6 +194,8 @@
         <a href="/precipitation/">Precipitation</a>
         <a href="#">Rainfall</a>
         <a href="#">Temperature</a>
+        <a href="#">About</a>
+        <a href="#">Help</a>
     </div>
     <p>&copy; Climate Data Analytics Portal. All rights reserved.</p>
 </footer>

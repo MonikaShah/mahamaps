@@ -106,6 +106,30 @@
             .map-controls { left: 2vw; right: 2vw; min-width: unset; width: 90vw; padding: 8px; }
             .map-controls button, .map-controls input, .map-controls select { min-height: 44px; }
         }
+        /* Mobile: toggle button for map controls (hidden on desktop) */
+        .map-controls-toggle {
+            display: none;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1002;
+            padding: 10px 14px;
+            min-height: 44px;
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.95em;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .map-controls-toggle:hover { background: #0056b3; }
+        @media (max-width: 768px) {
+            .map-controls-toggle { display: block; }
+            .map-controls.map-controls--collapsed { display: none !important; }
+            .map-controls { top: 56px; }
+        }
         .skip-link {
             position: absolute;
             top: -100px;
@@ -141,7 +165,8 @@
         <div class="progress-bar"><div class="progress-bar-inner"></div></div>
     </div>
     <div class="tab-content active" id="content-map" style="position:relative;">
-        <div class="map-controls">
+        <button type="button" class="map-controls-toggle" id="map-controls-toggle" onclick="toggleMapControls()" aria-label="Toggle map controls">Hide controls</button>
+        <div class="map-controls" id="map-controls">
             <label for="map_view">Map View:</label>
             <select id="map_view" onchange="switchMapView()">
                 <option value="osm">Standard</option>
@@ -210,6 +235,15 @@
         <p>&copy; Climate Data Analytics Portal. All rights reserved.</p>
     </footer>
     <script>
+        // Mobile: toggle map controls panel
+        function toggleMapControls() {
+            var panel = document.getElementById('map-controls');
+            var btn = document.getElementById('map-controls-toggle');
+            if (!panel || !btn) return;
+            panel.classList.toggle('map-controls--collapsed');
+            btn.textContent = panel.classList.contains('map-controls--collapsed') ? 'Show controls' : 'Hide controls';
+            btn.setAttribute('aria-label', panel.classList.contains('map-controls--collapsed') ? 'Show map controls' : 'Hide map controls');
+        }
         // Tab switching
         function showTab(tab) {
             document.getElementById('tab-map').classList.remove('active');

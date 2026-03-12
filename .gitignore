@@ -1,0 +1,27 @@
+# Data and generated files (large; keep locally)
+# If merge fails with "untracked working tree files would be overwritten",
+# move data/*.nc and db.sqlite3 aside, merge, then restore.
+data/*.nc
+db.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.so
+.env
+venv/
+.venv/
+
+# Django
+*.log
+local_settings.py
+staticfiles/
+media/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp

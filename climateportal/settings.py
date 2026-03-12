@@ -25,7 +25,12 @@ SECRET_KEY = 'django-insecure-t#wd8!%(e_0@wn_-(x#(y!lz9@z42klt**k467)ph#$jo0cnvl
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'mahamaps.com',
+    'www.mahamaps.com',
+    'localhost',
+    '127.0.0.1',
+]
 
 
 # Application definition

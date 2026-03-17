@@ -332,7 +332,7 @@
                   .then(geo => { lastLocationName = geo.display_name || ''; })
                   .catch(() => { lastLocationName = ''; })
                   .finally(() => {
-                    fetch('/precipitation/api/extremes', {
+                    fetch('/precipitation/api/extremes/', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)

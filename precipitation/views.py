@@ -4,7 +4,7 @@ import pandas as pd
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.shortcuts import render
 from shapely.geometry import box
-
+from django.views.decorators.csrf import csrf_exempt
 from backend.extremes_point import extremes_point
 from backend.nc_to_rainfall_extremes import extremes
 from backend.Rainfall_csv import rainfall
@@ -25,7 +25,7 @@ def precipitation_home(request):
 def map_view(request):
     return render(request, 'precipitation/map.html')
 
-
+@csrf_exempt
 def api_extremes(request):
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)

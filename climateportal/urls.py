@@ -16,11 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import home
+from .views import home,gwpz_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Root URL must show landing page (home). Do not redirect / to /precipitation/ in server config.
     path('', home, name='landing'),
     path('precipitation/', include('precipitation.urls')),
+    path('gwpz/', gwpz_view, name='gwpz'),  # Temporary, replace with gwpz_view when ready
 ]

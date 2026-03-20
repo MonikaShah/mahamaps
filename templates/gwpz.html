@@ -1,0 +1,432 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ground Water Priority Zone Map</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Portal navbar & footer (same style as precipitation page) */
+        .portal-navbar {
+            background: #004466;
+            padding: 15px;
+            display: flex;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+        .portal-navbar a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .portal-navbar a:hover { text-decoration: underline; }
+        .portal-navbar a.active { text-decoration: underline; }
+
+        .portal-footer {
+            background: #004466;
+            color: rgba(255,255,255,0.9);
+            padding: 24px 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .portal-footer a {
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            margin: 0 12px;
+        }
+        .portal-footer a:hover { text-decoration: underline; }
+
+        .portal-footer p { margin: 0; font-size: 0.9em; opacity: 0.9; }
+
+        .skip-link {
+            position: absolute;
+            top: -100px;
+            left: 12px;
+            background: #004466;
+            color: white;
+            padding: 8px 12px;
+            z-index: 100;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .skip-link:focus { top: 12px; }
+
+        #gwpz-main { flex: 1; min-height: 0; display: flex; }
+        #gwpz-map-wrap { position: relative; flex: 1; min-height: 0; width: 100%; }
+        #map { height:100%; width: 100%; }
+
+        @media (max-width: 768px) {
+            .portal-navbar { flex-wrap: wrap; gap: 10px; padding: 12px; }
+            .portal-footer { padding: 20px 12px; }
+            .portal-footer a { display: inline-block; margin: 4px 8px; font-size: 0.9em; }
+        }
+        .gwpz-basin-label {
+            position: absolute;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-weight: bold;
+            color: #0b3d5a;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .gwpz-download-controls {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 1000;
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+            display: flex;
+            gap: 8px;
+        }
+        .gwpz-download-controls button {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            font-weight: 600;
+        }
+        .gwpz-download-controls button:hover { background: #0056b3; }
+        .gwpz-download-status {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.65);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            display: none;
+            max-width: 80vw;
+        }
+    </style>
+</head>
+
+<body>
+
+<a href="#gwpz-main" class="skip-link">Skip to main content</a>
+<nav class="portal-navbar">
+    <a href="/">Home</a>
+    <a href="/precipitation/">Precipitation</a>
+    <a href="/gwpz/" class="active">Ground Water Priority Zone</a>
+    <a href="#">ForestFire</a>
+    <a href="#">Temperature</a>
+</nav>
+
+<div id="gwpz-main" style="flex: 1; min-height: 0;">
+    <div id="gwpz-map-wrap">
+        <div id="map"></div>
+        <div class="gwpz-basin-label">Godavari Basin</div>
+        <div class="gwpz-download-controls" aria-label="Download map">
+            <button type="button" onclick="downloadMapPNG()">Download PNG</button>
+            <button type="button" onclick="downloadMapPDF()">Download PDF</button>
+        </div>
+        <div id="gwpz-download-status" class="gwpz-download-status"></div>
+    </div>
+</div>
+
+<footer class="portal-footer">
+    <a href="/">Home</a>
+    <a href="/precipitation/">Precipitation</a>
+    <a href="/gwpz/">Ground Water Priority Zone</a>
+    <a href="#">ForestFire</a>
+    <a href="#">Temperature</a>
+    <a href="#">About</a>
+    <a href="#">Help</a>
+    <p>&copy; Climate Data Analytics Portal. All rights reserved.</p>
+</footer>
+
+<script>
+
+// Init map
+var map = L.map('map').setView([22, 78], 6);
+
+// Base layer (use a provider that doesn't block local/test referrers)
+// OSM volunteers may block tile loading when the request referrer is missing/localhost.
+var baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap & Carto',
+    maxZoom: 12,
+    crossOrigin: true
+}).addTo(map);
+// ✅ YOUR TILE LAYER (from Django static)
+var gwpz = L.tileLayer('/static/gwpz_tiles/{z}/{x}/{y}.png', {
+    tms: true,
+    opacity: 0.7,
+    minZoom: 5,
+    maxZoom: 12,
+    crossOrigin: true
+}).addTo(map);
+
+// Optional control
+L.control.layers(null, {
+    "gwpz": gwpz
+}).addTo(map);
+
+// Add India/state boundaries (as in precipitation page)
+var indiaBoundary;
+var indiaGeojsonData = null;
+var indiaBounds = null;
+var indiaUrl = "https://geonode.communitygis.in/geoserver/geonode/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geonode:india_country_boundary&outputFormat=application/json";
+var indiaFetchPromise = fetch(indiaUrl)
+    .then(res => res.json())
+    .then(data => {
+        indiaGeojsonData = data;
+
+        // dissolve on frontend (optional but good)
+        indiaBoundary = L.geoJSON(data, {
+            style: {
+                color: "#ff0000",
+                weight: 2,
+                fillOpacity: 0
+            }
+        }).addTo(map);
+
+        // Keep gwpz tiles on top of the boundaries.
+        gwpz.bringToFront();
+
+        // Full India bounds
+        indiaBounds = L.latLngBounds(
+            [6.5, 68],   // SW (Kerala)
+            [37.5, 97]   // NE (Arunachal)
+        );
+        map.setMaxBounds(indiaBounds);
+
+        // Ensure the user starts with the full India view.
+        // map.fitBounds(indiaBounds, { padding: [20, 20], maxZoom: 6, animate: false });
+        var gwpzBounds = L.latLngBounds(
+            [12, 72],   // SW (adjust based on your tiles)
+            [22, 82]    // NE
+        );
+
+        map.fitBounds(gwpzBounds, { padding: [20, 20], maxZoom: 8, animate: false });
+            })
+    .catch(err => {
+        console.error("India boundary failed:", err);
+    });
+
+// ---------------------------
+// Download map (client-side)
+// ---------------------------
+function setDownloadStatus(msg) {
+    var el = document.getElementById('gwpz-download-status');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.display = msg ? 'block' : 'none';
+    if (msg) {
+        setTimeout(function() { el.style.display = 'none'; }, 4000);
+    }
+}
+function waitForTiles(layer) {
+    return new Promise((resolve) => {
+        let loading = true;
+
+        layer.on('load', function () {
+            if (loading) {
+                loading = false;
+                setTimeout(resolve, 800); // small buffer
+            }
+        });
+
+        // fallback safety
+        setTimeout(resolve, 3000);
+    });
+}
+async function captureMapCanvas() {
+    setDownloadStatus('Preparing download...');
+    var sourceWrap = document.getElementById('gwpz-map-wrap');
+    if (!sourceWrap) throw new Error('Map wrapper not found');
+
+    // Wait until boundaries are loaded (used in the export map).
+    try {
+        if (typeof indiaFetchPromise !== 'undefined' && indiaFetchPromise) {
+            await indiaFetchPromise;
+        }
+    } catch (e) {
+        console.warn('India boundary not available for export:', e);
+    }
+
+    var exportWidth = 1200;
+    var exportHeight = 700;   // perfect landscape ratio
+    // Off-screen cloned map so downloading doesn't disturb user's zoom/view.
+    var exportId = 'gwpz-export-map-' + Date.now();
+    var exportWrapId = 'gwpz-export-wrap-' + Date.now();
+
+    var exportWrap = document.createElement('div');
+    exportWrap.id = exportWrapId;
+    exportWrap.style.position = 'absolute';
+    exportWrap.style.left = '-100000px';
+    exportWrap.style.top = '0';
+    exportWrap.style.width = exportWidth + 'px';
+    exportWrap.style.height = exportHeight + 'px';
+    exportWrap.style.background = '#ffffff';
+    exportWrap.style.zIndex = '0';
+    exportWrap.style.overflow = 'hidden';
+
+    var exportMapDiv = document.createElement('div');
+    exportMapDiv.id = exportId;
+    exportMapDiv.style.width = exportWidth + 'px';
+    exportMapDiv.style.height = exportHeight + 'px';
+
+    var exportLabel = document.createElement('div');
+    exportLabel.className = 'gwpz-basin-label';
+    exportLabel.textContent = 'Godavari Basin';
+
+    exportWrap.appendChild(exportMapDiv);
+    exportWrap.appendChild(exportLabel);
+    document.body.appendChild(exportWrap);
+
+    var exportMap = null;
+    var exportGwpz = null;
+    try {
+        exportMap = L.map(exportId, { zoomControl: false, attributionControl: false })
+            .setView(map.getCenter(), map.getZoom());  // ✅ EXACT SAME VIEW
+
+        setTimeout(() => {
+            exportMap.invalidateSize();
+        }, 300);
+        // Base tiles (Carto) - should allow crossOrigin export.
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap & Carto',
+            maxZoom: 12,
+            crossOrigin: true
+        }).addTo(exportMap);
+
+        exportGwpz = L.tileLayer('/static/gwpz_tiles/{z}/{x}/{y}.png', {
+            tms: true,
+            opacity: 0.7,
+            minZoom: 5,
+            maxZoom: 12,
+            crossOrigin: true
+        }).addTo(exportMap);
+
+        // State boundaries (below gwpz)
+        if (indiaGeojsonData && indiaBounds) {
+            L.geoJSON(indiaGeojsonData, {
+                style: {
+                    color: "#ff0000",
+                    weight: 2,
+                    fillOpacity: 0
+                }
+            }).addTo(exportMap);
+        }
+
+        var gwpzBounds = L.latLngBounds(
+            [12, 72],   // SW (adjust if needed)
+            [22, 82]    // NE
+        );
+
+        // exportMap.fitBounds(gwpzBounds, { padding: [20, 20], maxZoom: 8, animate: false });
+        
+        await new Promise(function(resolve) {
+            var resolved = false;
+            var fallback = setTimeout(function() {
+                if (resolved) return;
+                resolved = true;
+                resolve();
+            }, 2500);
+            exportMap.once('moveend', function() {
+                if (resolved) return;
+                resolved = true;
+                clearTimeout(fallback);
+                setTimeout(resolve, 1200);
+            });
+        });
+
+        // Ensure gwpz is on top.
+        if (exportGwpz) exportGwpz.bringToFront();
+
+        await waitForTiles(exportGwpz);
+        await new Promise(r => setTimeout(r, 500));  // extra safety
+        exportMap.invalidateSize();
+        var canvas = await html2canvas(exportWrap, {
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#ffffff',
+            scale: 2,   // ✅ HIGH QUALITY
+            logging: false
+        });
+        return canvas;
+    } finally {
+        try { if (exportMap) exportMap.remove(); } catch (e) {}
+        try { exportWrap.parentNode && exportWrap.parentNode.removeChild(exportWrap); } catch (e) {}
+    }
+}
+
+async function downloadMapPNG() {
+    try {
+        var canvas = await captureMapCanvas();
+        var a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'gwpz_map.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setDownloadStatus('PNG downloaded.');
+    } catch (e) {
+        console.error(e);
+        setDownloadStatus('Could not export PNG (tile CORS might block it).');
+        alert('Could not export PNG. If you see CORS/tile errors, the tile server may not allow screenshot export.');
+    }
+}
+
+async function downloadMapPDF() {
+    try {
+        var canvas = await captureMapCanvas();
+        var imgData = canvas.toDataURL('image/png');
+        var jsPDF = window.jspdf.jsPDF;
+        var pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        var pageWidth = pdf.internal.pageSize.getWidth();
+        var pageHeight = pdf.internal.pageSize.getHeight();
+
+        // Fit image onto A4 landscape, keeping aspect ratio.
+        var ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+        var imgW = canvas.width * ratio;
+        var imgH = canvas.height * ratio;
+        if (imgH > pageHeight) {
+            imgH = pageHeight;
+            imgW = (canvas.width / canvas.height) * imgH;
+        }
+
+        var x = (pageWidth - imgW) / 2;
+        var y = (pageHeight - imgH) / 2;
+        pdf.addImage(imgData, 'PNG', x, y, imgW, imgH);
+        pdf.save('gwpz_map.pdf');
+        setDownloadStatus('PDF downloaded.');
+    } catch (e) {
+        console.error(e);
+        setDownloadStatus('Could not export PDF (tile CORS might block it).');
+        alert('Could not export PDF. If you see CORS/tile errors, the tile server may not allow screenshot export.');
+    }
+}
+
+</script>
+
+</body>
+</html>

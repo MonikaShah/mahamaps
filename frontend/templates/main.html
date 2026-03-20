@@ -159,7 +159,7 @@
     <div id="precipitation-main" class="precipitation-app">
     <div class="tabs">
         <div class="tab active" id="tab-map" onclick="showTab('map')">Explore Extremes on Map</div>
-        <div class="tab" id="tab-download" onclick="showTab('download')">Download Data</div>
+        <!-- <div class="tab" id="tab-download" onclick="showTab('download')">Download Data</div> -->
     </div>
     <div class="progress-overlay" id="progress-overlay">
         <div class="progress-bar"><div class="progress-bar-inner"></div></div>
@@ -235,6 +235,7 @@
         <p>&copy; Climate Data Analytics Portal. All rights reserved.</p>
     </footer>
     <script>
+        var indiaBoundary;
         // Mobile: toggle map controls panel
         function toggleMapControls() {
             var panel = document.getElementById('map-controls');
@@ -265,7 +266,7 @@
             document.getElementById('point-group').style.display = (type === 'point') ? 'block' : 'none';
         }
         // Leaflet map setup
-        var map = L.map('map', { zoomControl: true }).setView([22, 78], 4.5);
+        var map = L.map('map', { zoomControl: true }).setView([22, 78], 5);
         // Add geocoder (search box)
         var geocoder = L.Control.geocoder({
             defaultMarkGeocode: false
@@ -280,14 +281,54 @@
         })
         .addTo(map);
         var baseLayers = {
-            'Standard': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }),
+            'Standard': L.tileLayer(
+                "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+                {
+                    maxZoom: 20,
+                    attribution: "&copy; Google"
+                }
+            ),
             'Satellite': L.tileLayer.provider('Esri.WorldImagery'),
             'Terrain': L.tileLayer.provider('Esri.WorldTopoMap')
         };
         baseLayers['Standard'].addTo(map);
+        let indiaUrl = "https://geonode.communitygis.in/geoserver/geonode/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geonode:states_in_india&outputFormat=application/json";
+
+            fetch(indiaUrl)
+            .then(res => res.json())
+            .then(data => {
+
+                // dissolve on frontend (optional but good)
+                indiaBoundary = L.geoJSON(data, {
+                    style: {
+                        color: "#ff0000",
+                        weight: 2,
+                        fillOpacity: 0
+                    }
+                }).addTo(map);
+
+                indiaBoundary.bringToFront();
+
+                // safe fit
+                if (indiaBoundary.getBounds().isValid()) {
+                    var indiaBounds = L.latLngBounds(
+                    [6.5, 68],   // SW (Kerala)
+                    [37.5, 97]   // NE (Arunachal)
+                );
+
+                // map.fitBounds(indiaBounds);
+                map.setMaxBounds(indiaBounds); // 🔥 restrict panning outside India
+                                }
+            })
+            .catch(err => {
+                console.error("India boundary failed:", err);
+            });
         function switchMapView() {
             var view = document.getElementById('map_view').value;
-            map.eachLayer(function(layer) { map.removeLayer(layer); });
+            map.eachLayer(function(layer) { 
+                if (layer instanceof L.TileLayer) {
+                    map.removeLayer(layer);
+                } });
             // Map dropdown value to baseLayers key
             var key = '';
             if(view === 'osm') key = 'Standard';

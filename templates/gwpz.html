@@ -170,11 +170,13 @@ var map = L.map('map').setView([22, 78], 6);
 
 // Base layer (use a provider that doesn't block local/test referrers)
 // OSM volunteers may block tile loading when the request referrer is missing/localhost.
-var baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap & Carto',
-    maxZoom: 12,
-    crossOrigin: true
-}).addTo(map);
+var baseLayer = L.tileLayer(
+    "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    {
+        maxZoom: 20,
+        attribution: "&copy; Google"
+    }
+).addTo(map);
 // ✅ YOUR TILE LAYER (from Django static)
 var gwpz = L.tileLayer('/static/gwpz_tiles/{z}/{x}/{y}.png', {
     tms: true,
@@ -189,48 +191,31 @@ L.control.layers(null, {
     "gwpz": gwpz
 }).addTo(map);
 
-// Add India/state boundaries (as in precipitation page)
-var indiaBoundary;
-var indiaGeojsonData = null;
-var indiaBounds = null;
-var indiaUrl = "https://geonode.communitygis.in/geoserver/geonode/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geonode:india_country_boundary&outputFormat=application/json";
-var indiaFetchPromise = fetch(indiaUrl)
-    .then(res => res.json())
-    .then(data => {
-        indiaGeojsonData = data;
+// ✅ India bounds
+var indiaBounds = L.latLngBounds(
+    [6.5, 68],
+    [37.5, 97]
+);
 
-        // dissolve on frontend (optional but good)
-        indiaBoundary = L.geoJSON(data, {
-            style: {
-                color: "#ff0000",
-                weight: 2,
-                fillOpacity: 0
-            }
-        }).addTo(map);
+// ✅ WMS states layer (FAST)
+var statesWMS = L.tileLayer.wms(
+    "https://geonode.communitygis.in/geoserver/geonode/wms",
+    {
+        layers: "geonode:states_in_india",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        tiled: true
+    }
+).addTo(map);
 
-        // Keep gwpz tiles on top of the boundaries.
-        gwpz.bringToFront();
+// ✅ Layer order (VERY IMPORTANT)
+statesWMS.bringToFront();   // states above base
+gwpz.bringToFront();        // gwpz above states
 
-        // Full India bounds
-        indiaBounds = L.latLngBounds(
-            [6.5, 68],   // SW (Kerala)
-            [37.5, 97]   // NE (Arunachal)
-        );
-        map.setMaxBounds(indiaBounds);
-
-        // Ensure the user starts with the full India view.
-        // map.fitBounds(indiaBounds, { padding: [20, 20], maxZoom: 6, animate: false });
-        var gwpzBounds = L.latLngBounds(
-            [12, 72],   // SW (adjust based on your tiles)
-            [22, 82]    // NE
-        );
-
-        map.fitBounds(gwpzBounds, { padding: [20, 20], maxZoom: 8, animate: false });
-            })
-    .catch(err => {
-        console.error("India boundary failed:", err);
-    });
-
+// ✅ Restrict map to India
+map.setMaxBounds(indiaBounds);
+        
 // ---------------------------
 // Download map (client-side)
 // ---------------------------
@@ -327,16 +312,16 @@ async function captureMapCanvas() {
         }).addTo(exportMap);
 
         // State boundaries (below gwpz)
-        if (indiaGeojsonData && indiaBounds) {
-            L.geoJSON(indiaGeojsonData, {
-                style: {
-                    color: "#ff0000",
-                    weight: 2,
-                    fillOpacity: 0
-                }
-            }).addTo(exportMap);
-        }
-
+        L.tileLayer.wms(
+    "https://geonode.communitygis.in/geoserver/geonode/wms",
+    {
+        layers: "geonode:states_in_india",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        tiled: true
+    }
+).addTo(exportMap);
         var gwpzBounds = L.latLngBounds(
             [12, 72],   // SW (adjust if needed)
             [22, 82]    // NE

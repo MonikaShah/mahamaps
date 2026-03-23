@@ -142,6 +142,21 @@
             border-radius: 4px;
         }
         .skip-link:focus { top: 12px; }
+        .map-boundary-status {
+            position: absolute;
+            z-index: 600;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.94);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+            pointer-events: none;
+        }
+        .map-boundary-status--done { display: none; }
     </style>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-providers/leaflet-providers.js"></script>
@@ -180,6 +195,7 @@
             <label>Select a point on the map:</label>
             <button onclick="getExtremesOnMap()" type="button">Show Extremes</button>
         </div>
+        <!-- <div id="map-boundary-status" class="map-boundary-status" aria-live="polite">Loading state boundaries…</div> -->
         <div id="map"></div>
     </div>
     <div class="tab-content" id="content-download">
@@ -228,14 +244,19 @@
     <footer class="portal-footer">
         <a href="/">Home</a>
         <a href="/precipitation/">Precipitation</a>
+        <a href="/gwpz/">Ground Water Priority Zone</a>
         <a href="#">ForestFire</a>
-        <a href="#">Temperature</a>
+        <a href="#">ground </a>
         <a href="#">About</a>
         <a href="#">Help</a>
         <p>&copy; Climate Data Analytics Portal. All rights reserved.</p>
     </footer>
     <script>
         var indiaBoundary;
+        function hideMapBoundaryStatus() {
+            var el = document.getElementById('map-boundary-status');
+            if (el) el.classList.add('map-boundary-status--done');
+        }
         // Mobile: toggle map controls panel
         function toggleMapControls() {
             var panel = document.getElementById('map-controls');
@@ -292,37 +313,18 @@
             'Terrain': L.tileLayer.provider('Esri.WorldTopoMap')
         };
         baseLayers['Standard'].addTo(map);
-        let indiaUrl = "https://geonode.communitygis.in/geoserver/geonode/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geonode:states_in_india&outputFormat=application/json";
+        const indiaBounds = L.latLngBounds([6.5, 68], [37.5, 97]);
 
-            fetch(indiaUrl)
-            .then(res => res.json())
-            .then(data => {
+        L.tileLayer.wms("https://geonode.communitygis.in/geoserver/geonode/wms", {
+            layers: "geonode:states_in_india",
+            format: "image/png",
+            transparent: true,
+            version: "1.1.1",
+            tiled: true   // 🔥 faster
+        }).addTo(map);
 
-                // dissolve on frontend (optional but good)
-                indiaBoundary = L.geoJSON(data, {
-                    style: {
-                        color: "#ff0000",
-                        weight: 2,
-                        fillOpacity: 0
-                    }
-                }).addTo(map);
-
-                indiaBoundary.bringToFront();
-
-                // safe fit
-                if (indiaBoundary.getBounds().isValid()) {
-                    var indiaBounds = L.latLngBounds(
-                    [6.5, 68],   // SW (Kerala)
-                    [37.5, 97]   // NE (Arunachal)
-                );
-
-                // map.fitBounds(indiaBounds);
-                map.setMaxBounds(indiaBounds); // 🔥 restrict panning outside India
-                                }
-            })
-            .catch(err => {
-                console.error("India boundary failed:", err);
-            });
+        map.setMaxBounds(indiaBounds);
+            
         function switchMapView() {
             var view = document.getElementById('map_view').value;
             map.eachLayer(function(layer) { 
@@ -335,6 +337,7 @@
             else if(view === 'sat') key = 'Satellite';
             else if(view === 'terrain') key = 'Terrain';
             if(baseLayers[key]) baseLayers[key].addTo(map);
+            
         }
         var drawnPoint = null;
         var lastCSVUrl = null;

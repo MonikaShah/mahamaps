@@ -126,6 +126,24 @@
             display: none;
             max-width: 80vw;
         }
+        .gwpz-legend {
+            background: rgba(255,255,255,0.95);
+            padding: 12px 14px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            font-size: 13px;
+            line-height: 18px;
+            color: #333;
+        }
+
+        .gwpz-legend i {
+            width: 18px;
+            height: 12px;
+            float: left;
+            margin-right: 8px;
+            margin-top: 3px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 
@@ -174,7 +192,8 @@ var baseLayer = L.tileLayer(
     "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
     {
         maxZoom: 20,
-        attribution: "&copy; Google"
+        attribution: "&copy; Google",
+        opacity: 0.9
     }
 ).addTo(map);
 // ✅ YOUR TILE LAYER (from Django static)
@@ -243,6 +262,24 @@ function waitForTiles(layer) {
         setTimeout(resolve, 3000);
     });
 }
+var legend = L.control({ position: 'bottomright' });
+
+legend.onAdd = function () {
+    var div = L.DomUtil.create('div', 'gwpz-legend');
+
+    div.innerHTML = `
+        <b>GWPZ (0.55 → 5)</b><br>
+        <i style="background:#d7191c"></i> 0.55 – Critical<br>
+        <i style="background:#fdae61"></i> 1.66 – High<br>
+        <i style="background:#ffffbf"></i> 2.77 – Moderate<br>
+        <i style="background:#abd9e9"></i> 3.88 – Low<br>
+        <i style="background:#2c7bb6"></i> 5.00 – Very Low
+        `;
+
+    return div;
+};
+
+legend.addTo(map);
 async function captureMapCanvas() {
     setDownloadStatus('Preparing download...');
     var sourceWrap = document.getElementById('gwpz-map-wrap');

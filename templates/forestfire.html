@@ -1,0 +1,198 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Forest Fire (GeoTIFF)</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- GeoTIFF support -->
+    <script src="https://unpkg.com/georaster"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+
+    <style>
+        body { margin:0; font-family: Arial; }
+        #map { height:100vh; }
+
+        .control-box {
+            position:absolute;
+            top:15px;
+            left:15px;
+            z-index:1000;
+            background:white;
+            padding:12px;
+            border-radius:10px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .legend {
+            background:white;
+            padding:10px;
+            border-radius:8px;
+            line-height:18px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .legend i {
+            width:18px;
+            height:12px;
+            float:left;
+            margin-right:8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div class="control-box">
+    <b>Layers</b><br>
+    <input type="checkbox" id="freqCheck" checked> Fire Frequency<br>
+    <input type="checkbox" id="hotspotCheck" checked> Hotspots
+</div>
+
+<script>
+
+// Init map
+var map = L.map('map').setView([22,78],6);
+
+// Base layer
+L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+    maxZoom: 20
+}).addTo(map);
+
+// 🔥 Load Frequency TIF
+var freqLayer;
+fetch("/static/cropped_frequency.tif")
+  .then(res => res.arrayBuffer())
+  .then(arrayBuffer => parseGeoraster(arrayBuffer))
+  .then(georaster => {
+
+    const min = georaster.mins[0];
+    const max = georaster.maxs[0];
+
+    freqLayer = new GeoRasterLayer({
+        georaster: georaster,
+        opacity: 0.9,
+        noDataValue: 0,
+
+        pixelValuesToColorFn: function(pixelValues) {
+            let val = pixelValues[0];
+
+            if (!val || val <= 0) return null;
+
+            // normalize
+            let n = (val - min) / (max - min);
+
+            // stronger contrast ramp
+            if (n < 0.1) return "#ffffcc";
+            if (n < 0.3) return "#ffeda0";
+            if (n < 0.5) return "#feb24c";
+            if (n < 0.7) return "#fd8d3c";
+            if (n < 0.9) return "#f03b20";
+            return "#bd0026";
+        },
+
+        resolution: 128
+    });
+
+    freqLayer.addTo(map);
+    map.fitBounds(freqLayer.getBounds());
+});
+
+
+// 🔥 Load Hotspot TIF
+var hotspotLayer;
+fetch("/static/cropped_hotspot.tif")
+  .then(res => res.arrayBuffer())
+  .then(arrayBuffer => parseGeoraster(arrayBuffer))
+  .then(georaster => {
+
+    const min = georaster.mins[0];
+    const max = georaster.maxs[0];
+
+    hotspotLayer = new GeoRasterLayer({
+        georaster: georaster,
+        opacity: 1,
+        noDataValue: 0,
+
+        pixelValuesToColorFn: function(pixelValues) {
+            let val = pixelValues[0];
+
+            if (!val || val <= 0) return null;
+
+            // 🔥 amplify contrast (log scale works better for fire data)
+            let n = (Math.log(val + 1) - Math.log(min + 1)) /
+                    (Math.log(max + 1) - Math.log(min + 1));
+
+            if (n < 0.25) return "#ffffb2";
+            if (n < 0.5) return "#fd8d3c";
+            if (n < 0.75) return "#f03b20";
+            return "#bd0026";
+        },
+
+        resolution: 128
+    });
+
+    hotspotLayer.addTo(map);
+
+    // ensure visibility
+    hotspotLayer.bringToFront();
+});
+
+setTimeout(() => {
+    if (freqLayer) freqLayer.setOpacity(0.6);   // reduce washout
+    if (hotspotLayer) hotspotLayer.bringToFront();
+}, 1500);
+
+// ✅ Checkbox toggles
+document.getElementById("freqCheck").addEventListener("change", function(){
+    if(freqLayer){
+        this.checked ? map.addLayer(freqLayer) : map.removeLayer(freqLayer);
+    }
+});
+
+document.getElementById("hotspotCheck").addEventListener("change", function(){
+    if(hotspotLayer){
+        this.checked ? map.addLayer(hotspotLayer) : map.removeLayer(hotspotLayer);
+    }
+});
+
+
+// 🌍 Restrict to India
+map.setMaxBounds([
+    [6.5,68],
+    [37.5,97]
+]);
+
+
+// 🧾 Legend
+var legend = L.control({position:'bottomright'});
+legend.onAdd = function(){
+    var div = L.DomUtil.create('div','legend');
+    div.innerHTML = `
+        <b>Fire Frequency</b><br>
+        <i style="background:#ffffb2"></i> Very Low<br>
+        <i style="background:#fecc5c"></i> Low<br>
+        <i style="background:#fd8d3c"></i> Moderate<br>
+        <i style="background:#f03b20"></i> High<br>
+        <i style="background:#bd0026"></i> Very High<br>
+        <br>
+        <b>Hotspots Intensity</b><br>
+        <i style="background:#ffeda0"></i> Low<br>
+        <i style="background:#feb24c"></i> Medium<br>
+        <i style="background:#fd8d3c"></i> High<br>
+        <i style="background:#f03b20"></i> Very High<br>
+        <i style="background:#bd0026"></i> Extreme
+    `;
+    return div;
+};
+legend.addTo(map);
+
+</script>
+
+</body>
+</html>

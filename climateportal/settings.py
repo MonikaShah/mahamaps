@@ -23,7 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-t#wd8!%(e_0@wn_-(x#(y!lz9@z42klt**k467)ph#$jo0cnvl'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
+
+if DEBUG:
+    IOT_DASHBOARD_URL = "http://127.0.0.1:8000/custom-dashboard/iot-dashboard"
+else:
+    IOT_DASHBOARD_URL = "https://watershed.mahamaps.com/custom-dashboard/iot-dashboard"
 
 ALLOWED_HOSTS = [
     'mahamaps.com',
@@ -129,3 +134,11 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Cache GeoJSON when not yet saved to data/geo/india-states.geojson
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'mahamaps-cache',
+    }
+}

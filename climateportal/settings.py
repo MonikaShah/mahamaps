@@ -130,6 +130,7 @@ USE_TZ = True
 # settings.py
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 # STATIC_URL = 'static/'
 
 # Default primary key field type

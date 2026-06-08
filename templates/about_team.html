@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<style>
+
+/* .about-header{
+    background:linear-gradient(90deg,#0b4f71,#12b6d9);
+    color:white;
+    padding:40px;
+    text-align:center;
+} */
+
+.pill-card{
+
+    background: white;
+
+    border: 1px solid #d8e7f3;
+
+    border-radius: 16px;
+
+    padding: 20px 10px;
+
+    text-align: center;
+
+    cursor: pointer;
+
+    transition: all .25s ease;
+
+    font-weight: 600;
+
+    min-height: 90px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    box-shadow:
+        0 2px 10px rgba(0,0,0,.06);
+}
+
+.pill-card:hover{
+
+    transform: translateY(-4px);
+
+    box-shadow:
+        0 10px 25px rgba(0,119,182,.18);
+
+    border-color:#0077b6;
+}
+
+.pill-card.active{
+
+    background: linear-gradient(
+        135deg,
+        #0077b6,
+        #00b4d8
+    );
+
+    color:white;
+
+    border-color:transparent;
+
+    box-shadow:
+        0 10px 25px rgba(0,119,182,.25);
+}
+
+.tab-pane{
+    display:none;
+}
+
+.tab-pane.active{
+    display:block;
+}
+
+.member-card{
+    background:white;
+    border:1px solid #dbe8f4;
+    border-radius:12px;
+    overflow:hidden;
+    height:100%;
+}
+
+.member-card img{
+    width:100%;
+    height:250px;
+    object-fit:cover;
+}
+
+.member-body{
+    padding:15px;
+}
+
+.publication-item{
+    border-bottom:1px solid #eee;
+    padding:10px 0;
+}
+.content-card{
+
+    background:white;
+
+    padding:40px;
+
+    border-radius:18px;
+
+    box-shadow:
+        0 4px 20px rgba(0,0,0,.08);
+
+    border-top:5px solid #00b4d8;
+
+    margin-top:25px;
+
+    line-height:1.8;
+}
+
+.content-card h2{
+
+    color:#004466;
+
+    margin-bottom:20px;
+
+    font-weight:700;
+}
+
+.content-card h3{
+
+    color:#0077b6;
+
+    margin-top:30px;
+}
+
+.content-card p{
+
+    color:#444;
+
+    font-size:16px;
+}
+.info-box{
+
+    background:#f8fbfd;
+
+    padding:25px;
+
+    border-radius:15px;
+
+    height:100%;
+
+    border-left:4px solid #00b4d8;
+
+    box-shadow:
+        0 2px 10px rgba(0,0,0,.05);
+}
+
+</style>
+
+
+<!-- <div class="about-header">
+
+    <h2>D-SciMAP Research Lab</h2>
+
+    <p>
+        Disaster – Science, Management and Policy Lab
+        <br>
+        Department of Civil Engineering, IIT Bombay
+    </p>
+
+</div> -->
+
+<div class="container style="max-width:1300px;">
+
+    <!-- PILLS -->
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-lg col-md-4 col-6">
+            <div class="pill-card active"
+                 onclick="showTab('overview',this)">
+                Overview
+            </div>
+        </div>
+
+        <div class="col-lg col-md-4 col-6">
+            <div class="pill-card"
+                 onclick="showTab('pi',this)">
+                PI
+            </div>
+        </div>
+
+        <div class="col-lg col-md-4 col-6">
+            <div class="pill-card"
+                 onclick="showTab('research',this)">
+                Research
+            </div>
+        </div>
+
+        <div class="col-lg col-md-4 col-6">
+            <div class="pill-card"
+                 onclick="showTab('publications',this)">
+                Publications
+            </div>
+        </div>
+
+        <div class="col-lg col-md-4 col-6">
+            <div class="pill-card"
+                 onclick="showTab('team',this)">
+                Team
+            </div>
+        </div>
+
+        <div class="col-lg col-md-4 col-6">
+            <div class="pill-card"
+                 onclick="showTab('alumni',this)">
+                Alumni
+            </div>
+        </div>
+
+        <div class="col-lg col-md-4 col-6">
+            <div class="pill-card"
+                 onclick="showTab('contact',this)">
+                Contact
+            </div>
+        </div>
+
+    </div>
+
+    <!-- OVERVIEW -->
+
+    <div id="overview"
+     class="tab-pane active">
+
+        <div class="content-card">
+
+            {{ overview.content|safe }}
+
+        </div>
+
+    </div>
+
+    <!-- PI -->
+
+    <div id="pi"
+         class="tab-pane">
+
+        {% if pi %}
+
+        <div class="row">
+
+            <div class="col-md-4">
+
+                {% if pi.photo %}
+                <img src="{{ pi.photo.url }}"
+                     class="img-fluid rounded">
+                {% endif %}
+
+            </div>
+
+            <div class="col-md-8">
+
+                <h3>{{ pi.name }}</h3>
+
+                <p>{{ pi.designation }}</p>
+
+                <p>
+                    <b>Email:</b>
+                    {{ pi.email }}
+                </p>
+
+                <p>
+                    <b>Mobile:</b>
+                    {{ pi.mobile }}
+                </p>
+
+                <p>
+                    {{ pi.research_topic }}
+                </p>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+    <!-- RESEARCH -->
+
+    <div id="research"
+         class="tab-pane">
+
+        {{ research.content|safe }}
+
+    </div>
+
+    <!-- PUBLICATIONS -->
+
+    <div id="publications"
+         class="tab-pane">
+
+        {% for pub in publications %}
+
+        <div class="publication-item">
+
+            <h6>{{ pub.title }}</h6>
+
+            <small>
+                {{ pub.authors }}
+                ({{ pub.year }})
+            </small>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    <!-- TEAM -->
+
+    <div id="team"
+         class="tab-pane">
+
+        <div class="row">
+
+            {% for member in current_members %}
+
+            <div class="col-lg-4 col-md-6 mb-4">
+
+                <div class="member-card">
+
+                    {% if member.photo %}
+                    <img src="{{ member.photo.url }}">
+                    {% endif %}
+
+                    <div class="member-body">
+
+                        <h5>{{ member.name }}</h5>
+
+                        <p>
+                            {{ member.designation }}
+                        </p>
+
+                        <p>
+                            {{ member.research_topic }}
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+    <!-- ALUMNI -->
+
+    <div id="alumni"
+         class="tab-pane">
+
+        <div class="table-responsive">
+
+            <table class="table table-bordered">
+
+                <thead>
+
+                    <tr>
+                        <th>Name</th>
+                        <th>Designation</th>
+                        <th>Year</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                {% for person in alumni %}
+
+                    <tr>
+
+                        <td>{{ person.name }}</td>
+
+                        <td>{{ person.designation }}</td>
+
+                        <td>{{ person.leaving_year }}</td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- CONTACT -->
+
+    <div id="contact"
+         class="tab-pane">
+
+        {{ contact.content|safe }}
+
+    </div>
+
+</div>
+
+<script>
+
+function showTab(tabId, el){
+
+    document
+        .querySelectorAll('.tab-pane')
+        .forEach(tab=>{
+            tab.classList.remove('active');
+        });
+
+    document
+        .querySelectorAll('.pill-card')
+        .forEach(btn=>{
+            btn.classList.remove('active');
+        });
+
+    document
+        .getElementById(tabId)
+        .classList.add('active');
+
+    el.classList.add('active');
+}
+
+</script>
+
+{% endblock %}

@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import home,gwpz_view,ff_view
+from .views import home,gwpz_view,ff_view,about_team
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,4 +25,5 @@ urlpatterns = [
     path('precipitation/', include('precipitation.urls')),
     path('gwpz/', gwpz_view, name='gwpz'),  # Temporary, replace with gwpz_view when ready
     path('ff/', ff_view, name='ff'),  # Temporary, replace with gwpz_view when ready
+    path('about-team/', about_team, name='about_team'),
 ]

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Climate Data Analytics Portal</title>
+    <title>D-SciMAP Research Lab Portal</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -196,25 +196,28 @@
 <div class="navbar">
     <a href="/">Home</a>
     <a href="/precipitation/">Precipitation</a>
-    <a href="#">ForestFire</a>
-    <a href="#">Ground Water Priority Zone</a>
+    <a href="/ff/">ForestFire</a>
+    <a href="/gwpz/">Ground Water Priority Zone</a>
     <a href="#">Landslide</a>
+    <a href="{{ iot_dashboard_url }}">
+       Living Lab Data
+    </a>
 </div>
 
 <div class="hero">
-    <a href="{{ iot_dashboard_url }}"
+    <a href="https://mandigo.in"
        class="living-lab-link" target="_blank">
-       Living Lab Data
+       Mandigo Portal
     </a>
-    <h1>Climate Data Analytics Portal</h1>
-    <p>Advanced precipitation and rainfall extreme analysis platform</p>
-    <a href="/precipitation/" class="hero-cta">Explore Precipitation →</a>
+    <h1>D-SciMAP Research Lab Portal</h1>
+    <p>A (Disaster – Science, Management And Policy) Research Lab <br>Dr. Parmeshwar D Udmale, Assistant Professor, Department of Civil Engineering, IIT Bombay</p>
+    <!-- <a href="/precipitation/" class="hero-cta">Explore Precipitation →</a> -->
     
 </div>
 
 <main id="main" class="main">
-    <h2>Welcome</h2>
-    <p>Use this portal to explore climate data, precipitation extremes, and related analytics. Choose a topic from the menu above to get started.</p>
+    <!-- <h2>Welcome</h2>
+    <p>Use this portal to explore climate data, precipitation extremes, and related analytics. Choose a topic from the menu above to get started.</p> -->
     <div class="cards">
         <a href="/precipitation/" class="card card-link">
             <h3>Precipitation</h3>
@@ -230,7 +233,7 @@
         <div class="card">
             <a href="/gwpz/" class="card card-link">
             <h3>Ground Water Priority Zone</h3>
-            <p>Temperature analysis and visualisation.</p></a>
+            <p></p></a>
             <!-- <span class="badge">Coming soon</span> -->
         </div>
         <div class="card coming-soon">
@@ -246,9 +249,9 @@
         <a href="/">Home</a>
         <a href="/precipitation/">Precipitation</a>
         <a href="/ff/">ForestFire</a>
-        <a href="#">Temperature</a>
+        <a href="/gwpz/">Ground Water Priority Zone</a>
         <a href="#">Landslide</a>
-        <a href="#">About</a>
+        <a href="/about-team/">About Team</a>
         <a href="#">Help</a>
     </div>
     <p>&copy; C-TARA, IIT-Bombay. All rights reserved.</p>

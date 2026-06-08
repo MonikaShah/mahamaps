@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>
+        {% block title %}
+            D-SciMAP Research Lab Portal
+        {% endblock %}
+    </title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+        body{
+            font-family:Arial,sans-serif;
+            margin:0;
+            min-height:100vh;
+            display:flex;
+            flex-direction:column;
+        }
+
+        /* ---------- NAVBAR ---------- */
+
+        .navbar-custom{
+            background:#004466;
+            padding:15px;
+            display:flex;
+            gap:20px;
+            flex-wrap:wrap;
+        }
+
+        .navbar-custom a{
+            color:white;
+            text-decoration:none;
+            font-weight:bold;
+        }
+
+        .navbar-custom a:hover{
+            text-decoration:underline;
+        }
+
+        /* ---------- HERO ---------- */
+
+        .hero{
+            position:relative;
+            padding:60px 20px;
+            text-align:center;
+            background:linear-gradient(
+                to right,
+                #0077b6,
+                #00b4d8
+            );
+            color:white;
+        }
+
+        .hero h1{
+            margin-bottom:10px;
+        }
+
+        .living-lab-link{
+            position:absolute;
+            top:20px;
+            right:20px;
+            color:white;
+            text-decoration:none;
+            background:rgba(255,255,255,0.2);
+            padding:8px 14px;
+            border-radius:6px;
+        }
+
+        .living-lab-link:hover{
+            background:rgba(255,255,255,0.3);
+        }
+
+        /* ---------- PAGE CONTENT ---------- */
+
+        .page-content{
+            flex:1;
+            width:100%;
+            padding:30px 20px;
+        }
+
+        /* ---------- FOOTER ---------- */
+
+        .footer{
+            background:#004466;
+            color:white;
+            text-align:center;
+            padding:25px;
+            margin-top:auto;
+        }
+
+        .footer-links{
+            margin-bottom:12px;
+        }
+
+        .footer-links a{
+            color:white;
+            margin:0 10px;
+            text-decoration:none;
+        }
+
+        .footer-links a:hover{
+            text-decoration:underline;
+        }
+
+        @media(max-width:768px){
+
+            .hero{
+                padding:40px 15px;
+            }
+
+            .hero h1{
+                font-size:1.5rem;
+            }
+
+            .living-lab-link{
+                position:static;
+                display:inline-block;
+                margin-bottom:15px;
+            }
+        }
+
+    </style>
+
+    {% block extra_css %}
+    {% endblock %}
+
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+
+<div class="navbar-custom">
+
+    <a href="/">Home</a>
+
+    <a href="/precipitation/">
+        Precipitation
+    </a>
+
+    <a href="/ff/">
+        ForestFire
+    </a>
+
+    <a href="/gwpz/">
+        Ground Water Priority Zone
+    </a>
+
+    <a href="#">
+        Landslide
+    </a>
+
+    <a href="/about-team/">
+        About Team
+    </a>
+
+    <a href="{{ iot_dashboard_url }}">
+        Living Lab Data
+    </a>
+
+</div>
+
+<!-- HERO -->
+
+{% block hero %}
+
+<div class="hero">
+
+    <a href="https://mandigo.in"
+       class="living-lab-link"
+       target="_blank">
+
+        Mandigo Portal
+
+    </a>
+
+    <h1>
+        D-SciMAP Research Lab Portal
+    </h1>
+
+    <p>
+        A (Disaster – Science, Management And Policy)
+        Research Lab
+        <br>
+        Dr. Parmeshwar D Udmale,
+        Assistant Professor,
+        Department of Civil Engineering,
+        IIT Bombay
+    </p>
+
+</div>
+
+{% endblock %}
+
+<!-- CONTENT -->
+
+<div class="page-content">
+
+    {% block content %}
+    {% endblock %}
+
+</div>
+
+<!-- FOOTER -->
+
+<footer class="footer">
+
+    <div class="footer-links">
+
+        <a href="/">Home</a>
+
+        <a href="/precipitation/">
+            Precipitation
+        </a>
+
+        <a href="/ff/">
+            ForestFire
+        </a>
+
+        <a href="/gwpz/">
+            Ground Water Priority Zone
+        </a>
+
+        <a href="/about-team/">
+            About Team
+        </a>
+
+    </div>
+
+    <p>
+        © C-TARA, IIT Bombay.
+        All rights reserved.
+    </p>
+
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+{% block extra_js %}
+{% endblock %}
+
+</body>
+</html>

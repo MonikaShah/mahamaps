@@ -144,6 +144,98 @@
             margin-top: 3px;
             border-radius: 2px;
         }
+        #watershed-panel{
+            position:absolute;
+            top:80px;
+            left:15px;
+            z-index:1000;
+
+            background:white;
+            padding:15px;
+            border-radius:10px;
+
+            box-shadow:0 2px 10px rgba(0,0,0,.2);
+            min-width:180px;
+        }
+        #sidebar{
+            position:absolute;
+            left:15px;
+            top:15px;
+
+            z-index:1000;
+
+            width:280px;
+            max-height:90vh;
+
+            overflow-y:auto;
+
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+        }
+
+        .sidebar-card{
+            background:rgba(255,255,255,.97);
+
+            border-radius:14px;
+
+            padding:15px;
+
+            box-shadow:0 5px 20px rgba(0,0,0,.15);
+
+            backdrop-filter:blur(6px);
+        }
+
+        .sidebar-card h3{
+            margin:0;
+            color:#004466;
+        }
+
+        .sidebar-card h4{
+            margin-top:0;
+            margin-bottom:10px;
+            color:#004466;
+        }
+
+        #watershed-level{
+            width:100%;
+            padding:10px;
+            border:1px solid #ddd;
+            border-radius:8px;
+        }
+
+        .legend-row{
+            display:flex;
+            align-items:center;
+            margin-bottom:8px;
+        }
+
+        .color{
+            width:18px;
+            height:18px;
+            margin-right:10px;
+            border-radius:3px;
+        }
+
+        .critical{
+            background:#d7191c;
+        }
+
+        .high{
+            background:#fdae61;
+        }
+
+        .moderate{
+            background:#ffffbf;
+        }
+
+        .low{
+            background:#abd9e9;
+        }
+
+        .vlow{
+            background:#2c7bb6;
+        }
     </style>
 </head>
 
@@ -153,13 +245,81 @@
 <nav class="portal-navbar">
     <a href="/">Home</a>
     <a href="/precipitation/">Precipitation</a>
-    <a href="/gwpz/" class="active">Ground Water Priority Zone</a>
     <a href="#">ForestFire</a>
+    <a href="/gwpz/" class="active">Ground Water Priority Zone</a>
     <a href="#">Temperature</a>
 </nav>
 
 <div id="gwpz-main" style="flex: 1; min-height: 0;">
     <div id="gwpz-map-wrap">
+        <div id="sidebar">
+
+    <div class="sidebar-card">
+        <h3>Ground Water Priority Zone</h3>
+        <p>Godavari River Basin</p>
+    </div>
+
+    <div class="sidebar-card">
+        <h4>Watershed Level</h4>
+
+        <select id="watershed-level">
+            <option value="5" selected>Level 5 (Major Basin)</option>
+            <option value="6">Level 6</option>
+            <option value="7">Level 7</option>
+            <option value="8">Level 8</option>
+            <option value="9">Level 9</option>
+            <option value="10">Level 10</option>
+            <option value="11">Level 11</option>
+            <option value="12">Level 12 (Micro Watershed)</option>
+        </select>
+    </div>
+
+    <div class="sidebar-card">
+        <h4>Layer Controls</h4>
+
+        <label>
+            <input type="checkbox" id="toggle-gwpz" checked>
+            GWPZ Layer
+        </label>
+
+        <br><br>
+
+        <label>
+            <input type="checkbox" id="toggle-states" checked>
+            State Boundary
+        </label>
+    </div>
+
+    <div class="sidebar-card">
+        <h4>GWPZ Classes</h4>
+
+        <div class="legend-row">
+            <span class="color critical"></span>
+            Critical
+        </div>
+
+        <div class="legend-row">
+            <span class="color high"></span>
+            High
+        </div>
+
+        <div class="legend-row">
+            <span class="color moderate"></span>
+            Moderate
+        </div>
+
+        <div class="legend-row">
+            <span class="color low"></span>
+            Low
+        </div>
+
+        <div class="legend-row">
+            <span class="color vlow"></span>
+            Very Low
+        </div>
+    </div>
+
+</div>
         <div id="map"></div>
         <div class="gwpz-basin-label">Godavari Basin</div>
         <div class="gwpz-download-controls" aria-label="Download map">
@@ -186,6 +346,11 @@
 // Init map
 var map = L.map('map').setView([22, 78], 6);
 
+L.control.scale({
+    metric:true,
+    imperial:false
+}).addTo(map);
+
 // Base layer (use a provider that doesn't block local/test referrers)
 // OSM volunteers may block tile loading when the request referrer is missing/localhost.
 var baseLayer = L.tileLayer(
@@ -193,7 +358,7 @@ var baseLayer = L.tileLayer(
     {
         maxZoom: 20,
         attribution: "&copy; Google",
-        opacity: 0.9
+        opacity: 0.4
     }
 ).addTo(map);
 // ✅ YOUR TILE LAYER (from Django static)
@@ -234,7 +399,30 @@ gwpz.bringToFront();        // gwpz above states
 
 // ✅ Restrict map to India
 map.setMaxBounds(indiaBounds);
-        
+// ----------Toggle layers
+document.getElementById("toggle-gwpz")
+.addEventListener("change", function(){
+
+if(this.checked){
+map.addLayer(gwpz);
+}else{
+map.removeLayer(gwpz);
+}
+
+});
+// ----------------------------
+// State boundary toggle
+// -------------------------------
+document.getElementById("toggle-states")
+.addEventListener("change", function(){
+
+    if(this.checked){
+        statesWMS.addTo(map);
+    } else {
+        map.removeLayer(statesWMS);
+    }
+
+});
 // ---------------------------
 // Download map (client-side)
 // ---------------------------
@@ -342,7 +530,7 @@ async function captureMapCanvas() {
 
         exportGwpz = L.tileLayer('/static/gwpz_tiles/{z}/{x}/{y}.png', {
             tms: true,
-            opacity: 0.7,
+            opacity: 0.35,
             minZoom: 5,
             maxZoom: 12,
             crossOrigin: true
@@ -447,7 +635,48 @@ async function downloadMapPDF() {
         alert('Could not export PDF. If you see CORS/tile errors, the tile server may not allow screenshot export.');
     }
 }
+//Connect watershed level radio buttons
 
+document
+.querySelectorAll('input[name="ws"]')
+.forEach(el => {
+
+    el.addEventListener('change', function(){
+
+        loadWatershed(this.value);
+
+    });
+
+});
+//watershed levels
+let watershedLayer = null;
+
+function loadWatershed(level){
+
+    if(watershedLayer){
+        map.removeLayer(watershedLayer);
+    }
+
+    fetch(`/static/watershed_levels/level${level}.geojson`)
+      .then(r => r.json())
+      .then(data => {
+
+        watershedLayer = L.geoJSON(data,{
+            style:{
+                color:"#FF0000",
+                weight:1,
+                fill:false
+            }
+        }).addTo(map);
+
+        if(statesWMS){
+            statesWMS.bringToFront();
+        }
+
+        watershedLayer.bringToFront();
+      });
+}
+loadWatershed(5);
 </script>
 
 </body>

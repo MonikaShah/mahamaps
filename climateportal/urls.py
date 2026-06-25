@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import home,gwpz_view,ff_view,about_team
+from .views import home,gwpz_view,ff_view,about_team, districts_api,talukas_api,villages_api,village_boundary_api
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,4 +26,23 @@ urlpatterns = [
     path('gwpz/', gwpz_view, name='gwpz'),  # Temporary, replace with gwpz_view when ready
     path('ff/', ff_view, name='ff'),  # Temporary, replace with gwpz_view when ready
     path('about-team/', about_team, name='about_team'),
+    path(
+        "api/districts/",
+        districts_api
+    ),
+
+    path(
+        "api/talukas/",
+        talukas_api
+    ),
+
+    path(
+        "api/villages/",
+        villages_api
+    ),
+
+    path(
+        "api/village-boundary/",
+        village_boundary_api
+    ),
 ]

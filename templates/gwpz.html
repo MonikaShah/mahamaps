@@ -1,79 +1,19 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Ground Water Priority Zone Map</title>
 
+{% block title %}Ground Water Priority Zone Map{% endblock %}
+{% block hero %}{% endblock %}
+{% block page_content_class %} page-content--map{% endblock %}
+
+{% block extra_css %}
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Portal navbar & footer (same style as precipitation page) */
-        .portal-navbar {
-            background: #004466;
-            padding: 15px;
-            display: flex;
-            gap: 20px;
-            flex-shrink: 0;
-        }
-        .portal-navbar a {
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .portal-navbar a:hover { text-decoration: underline; }
-        .portal-navbar a.active { text-decoration: underline; }
-
-        .portal-footer {
-            background: #004466;
-            color: rgba(255,255,255,0.9);
-            padding: 24px 20px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-        .portal-footer a {
-            color: rgba(255,255,255,0.9);
-            text-decoration: none;
-            margin: 0 12px;
-        }
-        .portal-footer a:hover { text-decoration: underline; }
-
-        .portal-footer p { margin: 0; font-size: 0.9em; opacity: 0.9; }
-
-        .skip-link {
-            position: absolute;
-            top: -100px;
-            left: 12px;
-            background: #004466;
-            color: white;
-            padding: 8px 12px;
-            z-index: 100;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .skip-link:focus { top: 12px; }
-
-        #gwpz-main { flex: 1; min-height: 0; display: flex; }
         #gwpz-map-wrap { position: relative; flex: 1; min-height: 0; width: 100%; }
         #map { height:100%; width: 100%; }
 
-        @media (max-width: 768px) {
-            .portal-navbar { flex-wrap: wrap; gap: 10px; padding: 12px; }
-            .portal-footer { padding: 20px 12px; }
-            .portal-footer a { display: inline-block; margin: 4px 8px; font-size: 0.9em; }
-        }
+        #gwpz-main { flex: 1; min-height: 0; display: flex; width: 100%; }
         .gwpz-basin-label {
             position: absolute;
             top: 14px;
@@ -236,91 +176,160 @@
         .vlow{
             background:#2c7bb6;
         }
+        #state-select,
+        #district-select,
+        #taluka-select,
+        #village-select{
+            width:100%;
+            padding:8px;
+            border:1px solid #ccc;
+            border-radius:6px;
+        }
+        #coords-box{
+            position:absolute;
+            bottom:10px;
+            left:320px;
+
+            z-index:1000;
+
+            background:white;
+
+            padding:6px 10px;
+
+            border-radius:6px;
+
+            font-size:12px;
+        }
     </style>
-</head>
+{% endblock %}
 
-<body>
-
-<a href="#gwpz-main" class="skip-link">Skip to main content</a>
-<nav class="portal-navbar">
-    <a href="/">Home</a>
-    <a href="/precipitation/">Precipitation</a>
-    <a href="#">ForestFire</a>
-    <a href="/gwpz/" class="active">Ground Water Priority Zone</a>
-    <a href="#">Temperature</a>
-</nav>
-
-<div id="gwpz-main" style="flex: 1; min-height: 0;">
+{% block content %}
+<div id="gwpz-main">
     <div id="gwpz-map-wrap">
         <div id="sidebar">
+    
+            <div class="sidebar-card">
+                <h4><i class="fa-solid fa-location-dot"></i>Location Filter</h4>
 
-    <div class="sidebar-card">
-        <h3>Ground Water Priority Zone</h3>
-        <p>Godavari River Basin</p>
-    </div>
+                <label>State</label>
+                <select id="state-select">
+                    <option value="Maharashtra" selected>Maharashtra</option>
+                </select>
 
-    <div class="sidebar-card">
-        <h4>Watershed Level</h4>
+                <br><br>
 
-        <select id="watershed-level">
-            <option value="5" selected>Level 5 (Major Basin)</option>
-            <option value="6">Level 6</option>
-            <option value="7">Level 7</option>
-            <option value="8">Level 8</option>
-            <option value="9">Level 9</option>
-            <option value="10">Level 10</option>
-            <option value="11">Level 11</option>
-            <option value="12">Level 12 (Micro Watershed)</option>
-        </select>
-    </div>
+                <label>District</label>
+                <select id="district-select">
+                    <option value="">Select District</option>
+                </select>
 
-    <div class="sidebar-card">
-        <h4>Layer Controls</h4>
+                <br><br>
 
-        <label>
-            <input type="checkbox" id="toggle-gwpz" checked>
-            GWPZ Layer
-        </label>
+                <label>Taluka</label>
+                <select id="taluka-select">
+                    <option value="">Select Taluka</option>
+                </select>
 
-        <br><br>
+                <br><br>
 
-        <label>
-            <input type="checkbox" id="toggle-states" checked>
-            State Boundary
-        </label>
-    </div>
+                <label>Village</label>
+                <select id="village-select">
+                    <option value="">Select Village</option>
+                </select>
+            </div>
+            <!-- <div class="sidebar-card">
+                <h3>Ground Water Priority Zone</h3>
+                <p>Godavari River Basin</p>
+            </div> -->
 
-    <div class="sidebar-card">
-        <h4>GWPZ Classes</h4>
+            <div class="sidebar-card">
+                <h4><i class="fa-solid fa-water"></i>Watershed Level</h4>
 
-        <div class="legend-row">
-            <span class="color critical"></span>
-            Critical
+                <select id="watershed-level">
+                    <option value="5" selected>Level 5 (Major Basin)</option>
+                    <option value="6">Level 6</option>
+                    <option value="7">Level 7</option>
+                    <option value="8">Level 8</option>
+                    <option value="9">Level 9</option>
+                    <option value="10">Level 10</option>
+                    <option value="11">Level 11</option>
+                    <option value="12">Level 12 (Micro Watershed)</option>
+                </select>
+            </div>
+
+            <div class="sidebar-card">
+                <h4><i class="fa-solid fa-layer-group"></i>Layer Controls</h4>
+
+                <label>
+                    <input type="checkbox" id="toggle-gwpz" checked>
+                    GWPZ Layer
+                </label>
+                
+
+                <br><br>
+
+                <label>GWPZ Opacity</label>
+
+                <input
+                    type="range"
+                    id="gwpz-opacity"
+                    min="0"
+                    max="100"
+                    value="70"
+                    style="width:100%;"
+                >
+                <br><br>
+                <label>
+                    <input type="checkbox" id="toggle-watershed" checked>
+                    Watershed Boundary
+                </label>
+
+                <br><br>
+
+                <label>
+                    <input type="checkbox" id="toggle-states" checked>
+                    State Boundary
+                </label>
+
+                <br><br>
+                <label>
+                    <input type="checkbox" id="toggle-village" checked>
+                    Village Boundary
+                </label>
+            </div>
+
+            <!-- <div class="sidebar-card">
+                <h4>GWPZ Classes</h4>
+
+                <div class="legend-row">
+                    <span class="color critical"></span>
+                    Critical
+                </div>
+
+                <div class="legend-row">
+                    <span class="color high"></span>
+                    High
+                </div>
+
+                <div class="legend-row">
+                    <span class="color moderate"></span>
+                    Moderate
+                </div>
+
+                <div class="legend-row">
+                    <span class="color low"></span>
+                    Low
+                </div>
+
+                <div class="legend-row">
+                    <span class="color vlow"></span>
+                    Very Low
+                </div>
+            </div> -->
+
         </div>
-
-        <div class="legend-row">
-            <span class="color high"></span>
-            High
-        </div>
-
-        <div class="legend-row">
-            <span class="color moderate"></span>
-            Moderate
-        </div>
-
-        <div class="legend-row">
-            <span class="color low"></span>
-            Low
-        </div>
-
-        <div class="legend-row">
-            <span class="color vlow"></span>
-            Very Low
-        </div>
-    </div>
-
-</div>
         <div id="map"></div>
+        <div id="coords-box"></div>
         <div class="gwpz-basin-label">Godavari Basin</div>
         <div class="gwpz-download-controls" aria-label="Download map">
             <button type="button" onclick="downloadMapPNG()">Download PNG</button>
@@ -329,34 +338,49 @@
         <div id="gwpz-download-status" class="gwpz-download-status"></div>
     </div>
 </div>
+{% endblock %}
 
-<footer class="portal-footer">
-    <a href="/">Home</a>
-    <a href="/precipitation/">Precipitation</a>
-    <a href="/gwpz/">Ground Water Priority Zone</a>
-    <a href="#">ForestFire</a>
-    <a href="#">Temperature</a>
-    <a href="#">About</a>
-    <a href="#">Help</a>
-    <p>&copy; Climate Data Analytics Portal. All rights reserved.</p>
-</footer>
-
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 
 // Init map
-var map = L.map('map').setView([22, 78], 6);
+var map = L.map('map', {
+    zoomControl: false
+}).setView([22, 78], 6);
 
+L.control.zoom({
+    position: 'topright'
+}).addTo(map);
+L.control.zoom({
+    position: 'bottomright'
+}).addTo(map);
 L.control.scale({
     metric:true,
     imperial:false
 }).addTo(map);
+map.on("mousemove", function(e){
 
+    document.getElementById("coords-box")
+    .innerHTML =
+
+        "Lat : " +
+        e.latlng.lat.toFixed(5)
+
+        +
+
+        "<br>Lon : " +
+        e.latlng.lng.toFixed(5);
+
+});
 // Base layer (use a provider that doesn't block local/test referrers)
 // OSM volunteers may block tile loading when the request referrer is missing/localhost.
 var baseLayer = L.tileLayer(
     "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
     {
-        maxZoom: 20,
+        maxZoom: 12,
         attribution: "&copy; Google",
         opacity: 0.4
     }
@@ -366,6 +390,7 @@ var gwpz = L.tileLayer('/static/gwpz_tiles/{z}/{x}/{y}.png', {
     tms: true,
     opacity: 0.7,
     minZoom: 5,
+    maxNativeZoom: 12,
     maxZoom: 12,
     crossOrigin: true
 }).addTo(map);
@@ -410,6 +435,17 @@ map.removeLayer(gwpz);
 }
 
 });
+
+// Opacity slider
+// -------------------------------
+document.getElementById("gwpz-opacity")
+.addEventListener("input", function(){
+
+    gwpz.setOpacity(
+        this.value / 100
+    );
+
+});
 // ----------------------------
 // State boundary toggle
 // -------------------------------
@@ -420,6 +456,21 @@ document.getElementById("toggle-states")
         statesWMS.addTo(map);
     } else {
         map.removeLayer(statesWMS);
+    }
+
+});
+// -------------------------------
+// Village boundary toggle
+// -------------------------------
+document.getElementById("toggle-village")
+.addEventListener("change", function(){
+
+    if(!villageBoundaryLayer) return;
+
+    if(this.checked){
+        map.addLayer(villageBoundaryLayer);
+    } else {
+        map.removeLayer(villageBoundaryLayer);
     }
 
 });
@@ -462,8 +513,22 @@ legend.onAdd = function () {
         <i style="background:#ffffbf"></i> 2.77 – Moderate<br>
         <i style="background:#abd9e9"></i> 3.88 – Low<br>
         <i style="background:#2c7bb6"></i> 5.00 – Very Low
-        `;
 
+        <hr>
+
+    <b>Watershed Boundary</b><br>
+
+    <div>
+        <svg width="30" height="10">
+            <line x1="0" y1="5" x2="30" y2="5"
+                  stroke="#800080"
+                  stroke-width="3"/>
+        </svg>
+        Selected Watershed Level
+    </div>
+    `;
+
+    
     return div;
 };
 
@@ -638,21 +703,23 @@ async function downloadMapPDF() {
 //Connect watershed level radio buttons
 
 document
-.querySelectorAll('input[name="ws"]')
-.forEach(el => {
-
-    el.addEventListener('change', function(){
-
-        loadWatershed(this.value);
-
-    });
-
+    .getElementById("watershed-level")
+    .addEventListener("change", function(){
+    loadWatershed(this.value);
 });
+
+
 //watershed levels
 let watershedLayer = null;
 
 function loadWatershed(level){
+    document.querySelector(".gwpz-basin-label")
+        .innerHTML =
+        "Godavari Basin | Watershed Level " + level;
 
+    window.currentWatershedLevel = level;
+
+    alert("Loading watershed level " + level + ". Please wait...");
     if(watershedLayer){
         map.removeLayer(watershedLayer);
     }
@@ -660,14 +727,58 @@ function loadWatershed(level){
     fetch(`/static/watershed_levels/level${level}.geojson`)
       .then(r => r.json())
       .then(data => {
+            console.log(data.features[0]);
+        watershedLayer = L.geoJSON(data, {
 
-        watershedLayer = L.geoJSON(data,{
-            style:{
-                color:"#FF0000",
-                weight:1,
-                fill:false
+            style: {
+                color: "#800080",
+                weight: 2,
+                fillOpacity: 0
+            },
+
+            onEachFeature: function(feature, layer) {
+
+                const p = feature.properties || {};
+
+                layer.bindPopup(`
+                    <b>Watershed Information</b>
+                    <hr>
+                    <b>Level:</b> ${window.currentWatershedLevel}<br>
+                    <b>HYBAS ID:</b> ${p.HYBAS_ID || 'N/A'}<br>
+                    <b>PFAF ID:</b> ${p.PFAF_ID || 'N/A'}<br>
+                    <b>Sub Area:</b> ${p.SUB_AREA || 'N/A'} km²<br>
+                    <b>Upstream Area:</b> ${p.UP_AREA || 'N/A'} km²<br>
+                    <b>Main Basin:</b> ${p.MAIN_BAS || 'N/A'}<br>
+                    <b>Next Down:</b> ${p.NEXT_DOWN || 'N/A'}<br>
+                    <b>Coastal Basin:</b> ${p.COAST == 1 ? 'Yes' : 'No'}
+                `);
+                layer.on({
+
+                mouseover:function(e){
+
+                    e.target.setStyle({
+                        weight:4,
+                        color:"#ff0000"
+                    });
+
+                },
+
+                mouseout:function(e){
+
+                    watershedLayer.resetStyle(
+                        e.target
+                    );
+
+                }
+            });
             }
-        }).addTo(map);
+            
+        });
+
+        
+        if(document.getElementById("toggle-watershed").checked){
+                watershedLayer.addTo(map);
+            }
 
         if(statesWMS){
             statesWMS.bringToFront();
@@ -677,7 +788,166 @@ function loadWatershed(level){
       });
 }
 loadWatershed(5);
-</script>
+document.getElementById("toggle-watershed")
+.addEventListener("change", function(){
 
-</body>
-</html>
+    if(!watershedLayer) return;
+
+    if(this.checked){
+        map.addLayer(watershedLayer);
+    }else{
+        map.removeLayer(watershedLayer);
+    }
+
+});
+// map.fitBounds(indiaBounds);
+
+const WFS_URL =
+"https://geonode.communitygis.in/geoserver/geonode/ows";
+
+const districtSelect = document.getElementById("district-select");
+const talukaSelect = document.getElementById("taluka-select");
+const villageSelect = document.getElementById("village-select");
+
+let villageBoundaryLayer = null;
+
+function getWFSUrl(cql='') {
+
+    let url =
+        WFS_URL +
+        '?service=WFS' +
+        '&version=1.0.0' +
+        '&request=GetFeature' +
+        '&typeName=geonode:mahavillagesall_mar2023_v1' +
+        '&outputFormat=application/json' +
+        '&srsName=EPSG:4326';
+
+    if(cql){
+        url += '&CQL_FILTER=' + encodeURIComponent(cql);
+    }
+
+    return url;
+}
+
+/* --------------------------
+   Load Districts
+--------------------------- */
+
+fetch('/api/districts/')
+.then(r => r.json())
+.then(districts => {
+
+    districtSelect.innerHTML =
+        '<option value="">Select District</option>';
+
+    districts.forEach(d => {
+        districtSelect.innerHTML +=
+            `<option value="${d}">${d}</option>`;
+    });
+
+});
+
+/* --------------------------
+   District Change
+--------------------------- */
+
+districtSelect.addEventListener('change', function(){
+
+    talukaSelect.innerHTML =
+        '<option value="">Select Taluka</option>';
+
+    villageSelect.innerHTML =
+        '<option value="">Select Village</option>';
+
+    let district = this.value;
+        console.log("Selected district:", district);
+
+    if(!district) return;
+
+    fetch(`/api/talukas/?district=${encodeURIComponent(district)}`)
+    .then(r => r.json())
+    .then(talukas => {
+                console.log("Talukas returned:", talukas);
+        talukas.forEach(t => {
+            talukaSelect.innerHTML +=
+                `<option value="${t}">${t}</option>`;
+        });
+
+    });
+
+});
+
+/* --------------------------
+   Taluka Change
+--------------------------- */
+
+talukaSelect.addEventListener('change', function(){
+
+    villageSelect.innerHTML =
+        '<option value="">Select Village</option>';
+
+    let district = districtSelect.value;
+    let tehsil = this.value;
+
+    if(!district || !tehsil) return;
+
+    fetch(
+        `/api/villages/?district=${encodeURIComponent(district)}&tehsil=${encodeURIComponent(tehsil)}`
+    )
+    .then(r => r.json())
+    .then(villages => {
+
+        villages.forEach(v => {
+            villageSelect.innerHTML +=
+                `<option value="${v}">${v}</option>`;
+        });
+
+    });
+
+});
+
+/* --------------------------
+   Village Change
+--------------------------- */
+
+villageSelect.addEventListener('change', function(){
+
+    let district = districtSelect.value;
+    let tehsil = talukaSelect.value;
+    let village = this.value;
+
+    if(!district || !tehsil || !village) return;
+
+    fetch(
+        `/api/village-boundary/?district=${encodeURIComponent(district)}&tehsil=${encodeURIComponent(tehsil)}&village=${encodeURIComponent(village)}`
+    )
+    .then(r => r.json())
+    .then(data => {
+
+        if(villageBoundaryLayer){
+            map.removeLayer(villageBoundaryLayer);
+        }
+
+        villageBoundaryLayer = L.geoJSON(data,{
+            style:{
+                color:"#ff0000",
+                weight:3,
+                fillOpacity:0
+            }
+        }).addTo(map);
+
+        if(villageBoundaryLayer.getBounds().isValid()){
+            map.fitBounds(
+                villageBoundaryLayer.getBounds(),
+                {
+                    maxZoom: 12
+                }
+            );
+        }
+
+    });
+
+});
+
+</script>
+{% endblock %}

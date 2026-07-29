@@ -385,6 +385,7 @@ var baseLayer = L.tileLayer(
         opacity: 0.4
     }
 ).addTo(map);
+
 // ✅ YOUR TILE LAYER (from Django static)
 var gwpz = L.tileLayer('/static/gwpz_tiles/{z}/{x}/{y}.png', {
     tms: true,

@@ -832,6 +832,11 @@ function getWFSUrl(cql='') {
 /* --------------------------
    Load Districts
 --------------------------- */
+function toTitleCase(str) {
+    return str
+        .toLowerCase()
+        .replace(/\b\w/g, c => c.toUpperCase());
+}
 
 fetch('/api/districts/')
 .then(r => r.json())
@@ -840,9 +845,30 @@ fetch('/api/districts/')
     districtSelect.innerHTML =
         '<option value="">Select District</option>';
 
-    districts.forEach(d => {
+    const districtRename = {
+        "AHAMADNAGAR": "Aliyanagar",
+        "AURANGABAD": "Chhatrapati Sambhajinagar",
+        "OSMANABAD": "Dharashiv"
+    };
+
+    // Prepare list with display names
+    const districtList = districts.map(d => {
+        let displayName = districtRename[d.toUpperCase()] || d;
+        displayName = toTitleCase(displayName);
+
+        return {
+            value: d,
+            display: displayName
+        };
+    });
+
+    // Sort alphabetically by display name
+    districtList.sort((a, b) => a.display.localeCompare(b.display));
+
+    // Populate dropdown
+    districtList.forEach(item => {
         districtSelect.innerHTML +=
-            `<option value="${d}">${d}</option>`;
+            `<option value="${item.value}">${item.display}</option>`;
     });
 
 });
@@ -867,10 +893,14 @@ districtSelect.addEventListener('change', function(){
     fetch(`/api/talukas/?district=${encodeURIComponent(district)}`)
     .then(r => r.json())
     .then(talukas => {
-                console.log("Talukas returned:", talukas);
+        console.log("Talukas returned:", talukas);
+        const talukaRename = {
+            "B\\d": "Beed"
+        };
         talukas.forEach(t => {
+            const displayName = talukaRename[t] || t;
             talukaSelect.innerHTML +=
-                `<option value="${t}">${t}</option>`;
+                `<option value="${t}">${displayName}</option>`;
         });
 
     });

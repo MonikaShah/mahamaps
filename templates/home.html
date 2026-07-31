@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block navbar %}
 {% endblock %}
+{% load static%}
 
 {% block extra_css %}
 
@@ -228,7 +229,7 @@ text-align:center;
 
 color:#003b5c;
 
-margin:40px 0 25px;
+margin:0 0 25px;
 
 }
 
@@ -365,77 +366,11 @@ height:350px;
 
 
 <div class="wrapper">
-
-
-
-
-<!-- STATISTICS -->
-
-
-<div class="stats">
-
-
-<div class="stat">
-
-<h2>03</h2>
-
-<p>
-GIS Applications
-</p>
-
-</div>
-
-
-
-<div class="stat">
-
-<h2>50+</h2>
-
-<p>
-Spatial Layers
-</p>
-
-</div>
-
-
-
-<div class="stat">
-
-<h2>12</h2>
-
-<p>
-Datasets
-</p>
-
-</div>
-
-
-
-<div class="stat">
-
-<h2>08</h2>
-
-<p>
-Research Projects
-</p>
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
 <!-- MAP SECTION -->
 
-
-<h2 class="section-title">
+<h3 class="section-title">
 Interactive Spatial Explorer
-</h2>
+</h3>
 
 
 
@@ -473,12 +408,15 @@ Map Layers
 </div>
 
 
-<div class="layer">
+{% static "Maha_Suscept.pdf" as landslide_pdf %}
 
-⛰️ LandSlide
-
+<div class="layer"
+     role="button"
+     tabindex="0"
+     onclick="window.open('{{ landslide_pdf }}', '_blank')"
+     onkeydown="if(event.key==='Enter' || event.key===' '){ window.open('{{ landslide_pdf }}', '_blank'); }">
+    ⛰️ Landslide
 </div>
-
 
 
 </div>
@@ -491,12 +429,6 @@ Map Layers
 
 
 </div>
-
-
-
-
-
-
 
 <!-- RESEARCH -->
 <!-- 
@@ -744,7 +676,7 @@ A real-time GIS-based comprehensive market decision support system for all agric
 <div class="card dataset" role="button" tabindex="0" onclick="window.open('https://mahamaps.com/iot', '_blank')" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
 
 <h3>
-Living Lab Portal
+IWRM Living Lab Portal
 </h3>
 
 <p>

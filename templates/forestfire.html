@@ -46,9 +46,11 @@ Historical Fire Frequency and Hotspot Analysis across Maharashtra
 
     display:grid;
 
-    grid-template-columns:20% 80%;
+    grid-template-columns:260px minmax(0,1fr) 260px;
 
     gap:20px;
+
+    align-items:start;
 
 }
 
@@ -123,9 +125,15 @@ Historical Fire Frequency and Hotspot Analysis across Maharashtra
     cursor:pointer;
 
 }
+#map-wrapper{
+
+    width:100%;
+
+}
 
 #map{
 
+    width:100%;
     height:650px;
 
     border-radius:18px;
@@ -134,40 +142,161 @@ Historical Fire Frequency and Hotspot Analysis across Maharashtra
 
 }
 
-.legend-card{
+.dataset-card{
 
-    margin-top:20px;
+    grid-column:1 / -1;
 
     background:white;
 
-    padding:20px;
+    padding:25px;
+
+    margin-top:20px;
 
     border-radius:18px;
 
     box-shadow:0 5px 20px rgba(0,0,0,.08);
 
 }
-.filter-bar{
+.legend-card{
 
-display:flex;
-
-gap:18px;
-
-align-items:end;
+margin-top:25px;
 
 background:white;
 
-padding:18px 20px;
+padding:28px;
 
 border-radius:16px;
 
-box-shadow:0 4px 15px rgba(0,0,0,.08);
-
-margin-bottom:20px;
-
-flex-wrap:wrap;
+box-shadow:0 5px 18px rgba(0,0,0,.08);
 
 }
+
+.legend-card h4{
+
+color:#004466;
+
+margin-bottom:15px;
+
+font-size:26px;
+
+}
+
+.legend-card p{
+
+font-size:15px;
+
+line-height:1.8;
+
+color:#444;
+
+}
+.legend-panel{
+
+    background:#fff;
+    border-radius:16px;
+    box-shadow:0 5px 18px rgba(0,0,0,.10);
+
+    overflow:hidden;
+
+    position:sticky;
+    top:20px;
+
+    width:240px;
+
+    max-height:650px;
+    overflow-y:auto;
+
+}
+
+.legend-header{
+
+    background:#004466;
+    color:#fff;
+
+    padding:12px 16px;
+
+    font-size:18px;
+    font-weight:600;
+
+}
+
+#legendContent{
+
+    padding:15px;
+
+}
+
+.legend-section{
+
+    margin-bottom:22px;
+
+}
+
+.legend-section:last-child{
+
+    margin-bottom:0;
+
+}
+
+.legend-section h6{
+
+    font-size:15px;
+
+    font-weight:600;
+
+    color:#004466;
+
+    margin-bottom:10px;
+
+}
+
+.legend-item{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:7px;
+
+    font-size:13px;
+
+    color:#333;
+
+}
+
+.lg{
+
+    width:16px;
+    height:16px;
+
+    border:1px solid #666;
+
+    flex-shrink:0;
+
+}
+.filter-bar{
+
+    display:flex;
+
+    gap:18px;
+
+    align-items:end;
+
+    background:white;
+
+    padding:18px 20px;
+
+    border-radius:16px;
+
+    box-shadow:0 4px 15px rgba(0,0,0,.08);
+
+    margin-bottom:20px;
+
+    flex-wrap:wrap;
+
+    }
 
 .filter-item{
 
@@ -188,23 +317,45 @@ font-weight:600;
 color:#004466;
 
 }
-
-@media(max-width:768px){
+@media(max-width:1100px){
 
 .map-layout{
 
-grid-template-columns:1fr;
+    grid-template-columns:1fr;
+
+}
+
+.legend-panel{
+
+    position:relative;
+
+    top:0;
+
+}
+
+.dataset-card{
+
+    grid-column:auto;
 
 }
 
 #map{
 
-height:450px;
+    height:500px;
 
 }
 
 }
 
+@media(max-width:768px){
+
+#map{
+
+    height:420px;
+
+}
+
+}
 </style>
 
 {% endblock %}
@@ -250,86 +401,180 @@ height:450px;
 <div class="sidebar">
     
 
-<h3>Map Layers</h3>
+    <h3>Map Layers</h3>
 
-<a href="/precipitation/" class="layer">
-🌧 Precipitation
-</a>
+    <a href="/precipitation/" class="layer">
+    🌧 Precipitation
+    </a>
 
-<div class="layer active">
+    <div class="layer active">
 
-🔥 Forest Fire
+    🔥 Forest Fire
 
-<div class="layer-options">
+    <div class="layer-options">
 
-<label>
+    <label>
 
-<input type="checkbox"
-       id="freqCheck"
-       checked>
+    <input type="checkbox"
+        id="freqCheck"
+        checked>
 
-Fire Frequency
+    Fire Frequency
 
-</label>
+    </label>
 
-<label>
+    <label>
 
-<input type="checkbox"
-       id="hotspotCheck"
-       checked>
+    <input type="checkbox"
+        id="hotspotCheck"
+        checked>
 
-Hotspots
+    Hotspots
 
-</label>
-<label>
-<input type="checkbox"
-       id="firecountCheck"
-       checked>
+    </label>
+    <label>
+    <input type="checkbox"
+        id="firecountCheck"
+        checked>
 
-Fire Counts
-</label>
+    Fire Counts
+    </label>
+
+    </div>
+
+    </div>
+
+    <a href="/gwpz/" class="layer">
+    💧 Ground Water Priority Zone
+    </a>
+
+    <a href="{% static 'Maha_Suscept.pdf' %}"
+    target="_blank"
+    class="layer">
+
+    ⛰ Landslide
+
+    </a>
+
+    <hr>
+
+    <a href="/about-team/" class="layer">
+
+    👥 Meet Our Team
+
+    </a>
 
 </div>
 
+
+<div id="map-wrapper">
+
+    <div id="map"></div>
 </div>
 
-<a href="/gwpz/" class="layer">
-💧 Ground Water Priority Zone
-</a>
+    <!-- Legend -->
+<div id="legendContainer" class="legend-panel">
 
-<a href="{% static 'Maha_Suscept.pdf' %}"
-   target="_blank"
-   class="layer">
+        <div class="legend-header">
+            <span><b>Legend</b></span>
+            <button id="legendToggle">−</button>
+        </div>
+    
+        <div id="legendContent">
+    
+            <div id="freqLegend" class="legend-section">
+                <h6>🔥 Fire Frequency</h6>
+    
+                <!-- <img src="https://geonode.communitygis.in/geoserver/geonode/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=geonode:frequency"style="width:100%;"> -->
+                
+                    
+                    <div class="legend-item"><span class="lg" style="background:#FFFFCC"></span> Very Low</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#FFF176"></span> Low</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#FFD54F"></span> Moderately Low</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#FFCA28"></span> Moderate</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#FFB300"></span> Moderately High</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#FB8C00"></span> High</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#F4511E"></span> Very High</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#E53935"></span> Severe</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#B71C1C"></span> Critical</div>
+                    
+                    <div class="legend-item"><span class="lg" style="background:#330000"></span> Extreme</div>
+                    
+                    </div>
+            </div>
+    
+            <div id="hotspotLegend" class="legend-section">
 
-⛰ Landslide
-
-</a>
-
-<hr>
-
-<a href="/about-team/" class="layer">
-
-👥 Meet Our Team
-
-</a>
+                <h6>🔥 Hotspot Analysis</h6>
+            
+                <div class="legend-item">
+                    <span class="lg" style="background:#b2182b"></span>
+                    99% Hot Spot
+                </div>
+            
+                <div class="legend-item">
+                    <span class="lg" style="background:#ef8a62"></span>
+                    95% Hot Spot
+                </div>
+            
+                <div class="legend-item">
+                    <span class="lg" style="background:#fddbc7"></span>
+                    90% Hot Spot
+                </div>
+            
+                <div class="legend-item">
+                    <span class="lg" style="background:#f7f7f7"></span>
+                    Not Significant
+                </div>
+            
+                <div class="legend-item">
+                    <span class="lg" style="background:#d1e5f0"></span>
+                    90% Cold Spot
+                </div>
+            
+                <div class="legend-item">
+                    <span class="lg" style="background:#67a9cf"></span>
+                    95% Cold Spot
+                </div>
+            
+                <div class="legend-item">
+                    <span class="lg" style="background:#2166ac"></span>
+                    99% Cold Spot
+                </div>
+            
+            </div>
+    
+            <div id="firecountLegend" class="legend-section">
+                <h6>🔥 Fire Count</h6>
+    
+                <img src="https://geonode.communitygis.in/geoserver/geonode/wms?SERVICE=WMS&VERSION=1.0.0&REQUEST=GetLegendGraphic&FORMAT=image/png&LAYER=geonode:firecount_5aug235">
+            </div>
+            
+    
+        </div>
+    
+    
 
 </div>
 
+<div class="dataset-card">
 
+    <h4>Forest Fire Dataset</h4>
 
-<div>
+    <p>
 
-<div id="map"></div>
-
-<div class="legend-card">
-
-<h4>Forest Fire Dataset</h4>
-
-<p>
-
-    Forest fire Frequency Map (2005–2024)-This map is generated using MODIS data on a 1 km x 1 km grid, highlights the average annual frequency of Forest fires, identifying areas most at risk over a 20-year period.<br>
-    Hot Spot Analysis of Forest fire Frequency -This map uses the Getis-Ord Gi* statistic to identify statistically significant clusters of high (hotspots) and low (coldspots) Forest fire occurrences.
-</p>
+        Forest fire Frequency Map (2005–2023)-This map is generated using MODIS data on a 1 km x 1 km grid, highlights the average annual frequency of Forest fires, identifying areas most at risk over a 20-year period.<br>
+        Hot Spot Analysis(2005–2024) of Forest fire Frequency -This map uses the Getis-Ord Gi* statistic to identify statistically significant clusters of high (hotspots) and low (coldspots) Forest fire occurrences.<br>
+        Fire Count statistics are available at the tehsil level. Village selections inherit the corresponding tehsil statistics.
+    </p>
 
 </div>
 

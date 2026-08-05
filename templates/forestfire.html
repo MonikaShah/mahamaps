@@ -34,7 +34,9 @@ Historical Fire Frequency and Hotspot Analysis across Maharashtra
 
 .wrapper{
 
-    max-width:1300px;
+    width:95%;
+
+    max-width:1600px;
 
     margin:auto;
 
@@ -44,25 +46,42 @@ Historical Fire Frequency and Hotspot Analysis across Maharashtra
 
 .map-layout{
 
-    display:grid;
+display:grid;
 
-    grid-template-columns:260px minmax(0,1fr) 260px;
+grid-template-columns:260px minmax(700px,1fr) 260px;
 
-    gap:20px;
+gap:20px;
 
-    align-items:start;
+align-items:start;
+
 
 }
 
 .sidebar{
 
-    background:white;
-
-    padding:25px;
+    background:#fff;
 
     border-radius:18px;
 
     box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+    padding:25px;
+
+    height:650px;
+
+    display:flex;
+
+    flex-direction:column;
+
+}
+.sidebar,
+.legend-panel{
+
+    height:70vh;
+
+    min-height:500px;
+
+    max-height:750px;
 
 }
 
@@ -134,7 +153,12 @@ Historical Fire Frequency and Hotspot Analysis across Maharashtra
 #map{
 
     width:100%;
-    height:650px;
+
+    height:70vh;
+
+    min-height:450px;
+
+    max-height:750px;
 
     border-radius:18px;
 
@@ -193,17 +217,17 @@ color:#444;
 .legend-panel{
 
     background:#fff;
-    border-radius:16px;
-    box-shadow:0 5px 18px rgba(0,0,0,.10);
 
-    overflow:hidden;
+    border-radius:18px;
 
-    position:sticky;
-    top:20px;
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
 
-    width:240px;
+    height:70vh;
 
-    max-height:650px;
+    min-height:500px;
+
+    max-height:750px;
+
     overflow-y:auto;
 
 }
@@ -341,19 +365,139 @@ color:#004466;
 
 #map{
 
-    height:500px;
+    width:100%;
+
+    height:70vh;
+
+    min-height:500px;
+
+    max-height:750px;
+
+    border-radius:18px;
 
 }
 
 }
+@media (max-width:1200px){
 
-@media(max-width:768px){
+.map-layout{
+
+grid-template-columns:240px 1fr;
+
+}
+
+.legend-panel{
+
+grid-column:1 / -1;
+
+width:100%;
+
+position:static;
+
+margin-top:20px;
+
+}
+@media (max-width:768px){
+    
+.map-layout{
+
+    display:flex;
+    flex-direction:column;
+
+}
+
+.sidebar,
+.legend-panel{
+
+    height:auto;
+    max-height:none;
+
+}
 
 #map{
 
     height:420px;
 
 }
+
+
+
+.wrapper{
+
+width:100%;
+
+padding:12px;
+
+}
+
+.filter-bar{
+
+flex-direction:column;
+
+align-items:stretch;
+
+gap:12px;
+
+}
+
+.filter-item{
+
+width:100%;
+
+min-width:100%;
+
+}
+
+.map-layout{
+
+display:flex;
+
+flex-direction:column;
+
+gap:15px;
+
+}
+
+.sidebar{
+
+order:1;
+
+}
+
+#map-wrapper{
+
+order:2;
+
+}
+
+.legend-panel{
+
+order:3;
+
+width:100%;
+
+position:static;
+
+max-height:none;
+
+}
+
+.legend-card{
+
+order:4;
+
+}
+
+#map{
+
+    height:420px;
+    
+    min-height:420px;
+    
+    }
+
+}
+
 
 }
 </style>

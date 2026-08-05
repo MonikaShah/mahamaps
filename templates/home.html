@@ -98,7 +98,7 @@ body{
 display:grid;
 
 grid-template-columns:
-320px 1fr;
+20% 80%;
 
 gap:20px;
 
@@ -378,48 +378,43 @@ Interactive Spatial Explorer
 
 
 
-<div class="sidebar">
+    <div class="sidebar">
+        <h3>Map Layers</h3>
+
+        <div class="layer" role="button" tabindex="0" onclick="window.location='/precipitation/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
+            
+        🌧 Precipitation
+
+        </div>
 
 
-<h3>
-Map Layers
-</h3>
+        <div class="layer" role="button" tabindex="0" onclick="window.location='/ff/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/ff/';}">
+
+        🔥 Forest Fire
+
+        </div>
 
 
+        <div class="layer" role="button" tabindex="0" onclick="window.location='/gwpz/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
 
-<div class="layer" role="button" tabindex="0" onclick="window.location='/precipitation/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
-    
-🌧 Precipitation
+        💧 Ground Water
 
-</div>
-
-
-<div class="layer" role="button" tabindex="0" onclick="window.location='/ff/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/ff/';}">
-
-🔥 Forest Fire
-
-</div>
+        </div>
 
 
-<div class="layer" role="button" tabindex="0" onclick="window.location='/gwpz/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
+        {% static "Maha_Suscept.pdf" as landslide_pdf %}
 
-💧 Ground Water
+        <div class="layer"
+            role="button"
+            tabindex="0"
+            onclick="window.open('{{ landslide_pdf }}', '_blank')"
+            onkeydown="if(event.key==='Enter' || event.key===' '){ window.open('{{ landslide_pdf }}', '_blank'); }">
+            ⛰️ Landslide
+        </div>
+        <hr>
+        <h4>Meet Our Team</h4>
 
-</div>
-
-
-{% static "Maha_Suscept.pdf" as landslide_pdf %}
-
-<div class="layer"
-     role="button"
-     tabindex="0"
-     onclick="window.open('{{ landslide_pdf }}', '_blank')"
-     onkeydown="if(event.key==='Enter' || event.key===' '){ window.open('{{ landslide_pdf }}', '_blank'); }">
-    ⛰️ Landslide
-</div>
-
-
-</div>
+    </div>
 
 
 
@@ -630,7 +625,18 @@ mapping.
 
 </a>
 
+<a href="{% static 'Maha_Suscept.pdf' %}" class="card" style="text-decoration:none;color:inherit">
+    <h3>
+        ⛰️ Landslide 
+    </h3>
+    <p>
+        Landslide Succesptibility map of Maharashtra.
+    </p>
 
+    <b>
+    <!-- Open Tool → -->
+    </b>
+</a>
 
 
 </div>

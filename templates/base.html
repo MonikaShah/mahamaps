@@ -1,389 +1,395 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>
-        {% block title %}
-            D-SciMAP Research Lab Portal
-        {% endblock %}
-    </title>
+<title>
+{% block title %}
+D-SciMAP Research Lab Portal
+{% endblock %}
+</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet">
 
-    <style>
+<style>
 
-        *{
-            box-sizing:border-box;
-        }
+*{
+    box-sizing:border-box;
+}
 
-        body{
-            font-family:Arial,sans-serif;
-            margin:0;
-            min-height:100vh;
-            display:flex;
-            flex-direction:column;
-        }
+html,
+body{
+    margin:0;
+    min-height:100%;
+}
 
-        /* ---------- NAVBAR ---------- */
+body{
 
-        .navbar-custom{
-            background:#004466;
-            padding:15px;
-            display:flex;
-            gap:20px;
-            flex-wrap:wrap;
-            flex-shrink:0;
-        }
+    font-family:Arial,sans-serif;
 
-        .navbar-custom a{
-            color:white;
-            text-decoration:none;
-            font-weight:bold;
-        }
+    background:#f4f7fb;
 
-        .navbar-custom a:hover,
-        .navbar-custom a.active{
-            text-decoration:underline;
-        }
-
-        /* ---------- HERO ---------- */
-
-        /* ---------- HERO HEADER ---------- */
-
-        .hero{
-
-            position:relative;
-
-            padding:75px 20px 65px;
-
-            text-align:center;
-
-            background:
-            linear-gradient(
-                135deg,
-                rgba(0,59,92,.95),
-                rgba(0,119,182,.9)
-            );
-
-            color:white;
-
-            overflow:hidden;
-
-        }
-
-
-
-        /* decorative GIS pattern */
-        .hero-links{
-    position:absolute;
-    top:20px;
-    right:20px;
     display:flex;
-    gap:12px;
+
+    flex-direction:column;
+
+}
+
+
+
+/* ===========================
+   NAVBAR
+=========================== */
+
+.navbar-custom{
+
+    background:#004466;
+
+    padding:14px 28px;
+
+    display:flex;
+
+    gap:18px;
+
     flex-wrap:wrap;
-    justify-content:flex-end;
-    z-index:10;
+
+}
+
+.navbar-custom a{
+
+    color:#fff;
+
+    text-decoration:none;
+
+    font-weight:600;
+
+}
+
+.navbar-custom a:hover,
+.navbar-custom a.active{
+
+    text-decoration:underline;
+
+}
+
+
+
+/* ===========================
+   HERO
+=========================== */
+
+.hero{
+
+    position:relative;
+
+    background:
+    linear-gradient(
+        135deg,
+        #003b5c,
+        #0077b6
+    );
+
+    color:white;
+
+    text-align:center;
+
+    padding:70px 20px 60px;
+
+    overflow:hidden;
+
+}
+
+.hero-links{
+
+    position:absolute;
+
+    top:20px;
+
+    right:25px;
+
+    display:flex;
+
+    gap:12px;
+
+    flex-wrap:wrap;
+
 }
 
 .hero-link{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
 
     padding:10px 18px;
 
-    background:rgba(255,255,255,.18);
-    backdrop-filter:blur(8px);
-
-    border:1px solid rgba(255,255,255,.25);
     border-radius:30px;
 
+    background:rgba(255,255,255,.18);
+
     color:#fff;
+
     text-decoration:none;
-    font-weight:600;
-    font-size:.95rem;
+
+    backdrop-filter:blur(8px);
 
     transition:.25s;
+
 }
 
 .hero-link:hover{
-    background:#fff;
+
+    background:white;
+
     color:#004466;
-    transform:translateY(-2px);
+
+}
+
+.hero h1{
+
+    font-size:2.5rem;
+
+    margin-bottom:15px;
+
+}
+
+.hero p{
+
+    max-width:760px;
+
+    margin:auto;
+
+    line-height:1.8;
+
+    font-size:1.05rem;
+
+}
+
+.hero strong{
+
+    color:#caf0f8;
+
 }
 
 
-        .hero h1{
 
-            position:relative;
+/* ===========================
+   PAGE CONTENT
+=========================== */
 
-            font-size:2.6rem;
+.page-content{
 
-            font-weight:700;
+    flex:1;
 
-            margin-bottom:15px;
+    width:100%;
 
-        }
+    padding:30px 0;
 
-
-
-        .hero p{
-
-            position:relative;
-
-            max-width:750px;
-
-            margin:auto;
-
-            font-size:1.15rem;
-
-            line-height:1.7;
-
-        }
+}
 
 
 
-        .hero strong{
+/* ===========================
+   FOOTER
+=========================== */
 
-            color:#caf0f8;
+.footer{
 
-        }
+    margin-top:auto;
+
+    background:#004466;
+
+    color:white;
+
+    text-align:center;
+
+    padding:25px;
+
+}
+
+.footer-links{
+
+    margin-bottom:10px;
+
+}
+
+.footer-links a{
+
+    color:white;
+
+    text-decoration:none;
+
+    margin:0 10px;
+
+}
+
+.footer-links a:hover{
+
+    text-decoration:underline;
+
+}
 
 
 
-        
-        /* ---------- PAGE CONTENT ---------- */
+/* ===========================
+   MOBILE
+=========================== */
 
-        .page-content{
-            flex:1;
-            width:100%;
-            padding:30px 20px;
-        }
+@media(max-width:768px){
 
-        .page-content--map{
-            flex:1;
-            min-height:0;
-            padding:0;
-            display:flex;
-            flex-direction:column;
-        }
+.hero{
 
-        .page-content--center{
-            display:flex;
-            justify-content:center;
-            align-items:flex-start;
-            padding:24px 12px;
-        }
+padding:95px 20px 45px;
 
-        /* ---------- FOOTER ---------- */
+}
 
-        .footer{
-            background:#004466;
-            color:white;
-            text-align:center;
-            padding:25px;
-            margin-top:auto;
-            flex-shrink:0;
-        }
+.hero-links{
 
-        .footer-links{
-            margin-bottom:12px;
-        }
+position:static;
 
-        .footer-links a{
-            color:white;
-            margin:0 10px;
-            text-decoration:none;
-        }
+justify-content:center;
 
-        .footer-links a:hover{
-            text-decoration:underline;
-        }
+margin-bottom:20px;
 
-        .skip-link {
-            position: absolute;
-            top: -100px;
-            left: 12px;
-            background: #004466;
-            color: white;
-            padding: 8px 12px;
-            z-index: 100;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .skip-link:focus { top: 12px; }
+}
 
-        @media (max-width:768px){
+.hero h1{
 
-        .hero{
-            padding:100px 20px 45px;
-        }
+font-size:1.8rem;
 
-        .hero-links{
-            position:static;
-            margin-bottom:20px;
-            justify-content:center;
-        }
+}
 
-        .hero h1{
-            font-size:1.8rem;
-        }
+.hero p{
 
-        .hero p{
-            font-size:.95rem;
-        }
+font-size:.95rem;
 
-        .navbar-custom{
-            gap:12px;
-        }
+}
 
-            .footer-links a { display: inline-block; margin: 4px 8px; }
-        }
+}
 
-    </style>
+</style>
 
-    {% block extra_css %}
-    {% endblock %}
+{% block extra_css %}
+{% endblock %}
 
 </head>
 
 <body>
 
-<a href="#main-content" class="skip-link">Skip to main content</a>
+    {% block navbar %}
 
-<!-- NAVBAR -->
-{% block navbar %}
-<div class="navbar-custom">
-
-    <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Home</a>
-
-    <a href="/precipitation/"{% if '/precipitation/' in request.path %} class="active"{% endif %}>
-        Precipitation
-    </a>
-
-    <a href="/ff/"{% if request.path == '/ff/' or request.path|slice:':4' == '/ff/' %} class="active"{% endif %}>
-        Forest Fire
-    </a>
-
-    <a href="/gwpz/"{% if '/gwpz/' in request.path %} class="active"{% endif %}>
-        Ground Water Priority Zone
-    </a>
-
+    {% if show_navbar|default:True %}
     
-    <a href="{% static 'Maha_Suscept.pdf' %}"  target="_blank"
-    rel="noopener">
-        Landslide
+    <div class="navbar-custom">
+    
+        <a href="/" {% if request.path == '/' %}class="active"{% endif %}>Home</a>
+    
+        <a href="/precipitation/" {% if '/precipitation/' in request.path %}class="active"{% endif %}>
+            Precipitation
+        </a>
+    
+        <a href="/ff/" {% if '/ff/' in request.path %}class="active"{% endif %}>
+            Forest Fire
+        </a>
+    
+        <a href="/gwpz/" {% if '/gwpz/' in request.path %}class="active"{% endif %}>
+            Ground Water Priority Zone
+        </a>
+    
+        <a href="{% static 'Maha_Suscept.pdf' %}" target="_blank">
+            Landslide
+        </a>
+    
+        <a href="/about-team/" {% if '/about-team/' in request.path %}class="active"{% endif %}>
+            About Team
+        </a>
+    
+        <a href="{{ iot_dashboard_url }}">
+            Living Lab Data
+        </a>
+    
+    </div>
+    
+    {% endif %}
+    
+    {% endblock %}
 
-    </a>
 
-    <a href="/about-team/"{% if '/about-team/' in request.path %} class="active"{% endif %}>
-        About Team
-    </a>
-
-    <a href="{{ iot_dashboard_url }}">
-        Living Lab Data
-    </a>
-
-</div>
-{% endblock %}
-<!-- HERO -->
 
 {% block hero %}
-<div class ="hero">
+
+<div class="hero">
+
 <div class="hero-links">
 
-    <a href="https://mandigo.in"
-       class="hero-link"
-       target="_blank"
-       rel="noopener noreferrer">
-         MandiGo
-    </a>
+<a href="https://mandigo.in"
+class="hero-link"
+target="_blank">
+MandiGo
+</a>
 
-    <a href="https://mahamaps.com/iot/"
-       class="hero-link"
-       target="_blank"
-       rel="noopener noreferrer">
-        IWRM Living Lab
-    </a>
+<a href="https://mahamaps.com/iot/"
+class="hero-link"
+target="_blank">
+IWRM Living Lab
+</a>
 
 </div>
 
-
-<h1>
-    D-SciMAP Research Lab
-</h1>
-
+<h1>D-SciMAP Research Lab</h1>
 
 <p>
 
 <strong>
-    Disaster-Science, Management And Policy
-    Research Lab
+Disaster Science, Management and Policy Research Lab
 </strong>
 
 <br><br>
 
-
 Dr. Parmeshwar D. Udmale
+
 <br>
 
-Assistant Professor,
-CTARA,
-IIT Bombay
+Assistant Professor, CTARA, IIT Bombay
 
 </p>
-
 
 </div>
 
 {% endblock %}
 
-<!-- CONTENT -->
 
-<div id="main-content" class="page-content{% block page_content_class %}{% endblock %}">
 
-    {% block content %}
-    {% endblock %}
+<div class="page-content">
+
+{% block content %}
+{% endblock %}
 
 </div>
 
-<!-- FOOTER -->
+
 
 <footer class="footer">
 
-    <div class="footer-links">
+<div class="footer-links">
 
-        <a href="/">Home</a>
+<a href="/">Home</a>
 
-        <a href="/precipitation/">
-            Precipitation
-        </a>
+<a href="/precipitation/">Precipitation</a>
 
-        <a href="/ff/">
-            ForestFire
-        </a>
+<a href="/ff/">Forest Fire</a>
 
-        <a href="/gwpz/">
-            Ground Water Priority Zone
-        </a>
+<a href="/gwpz/">Ground Water Priority Zone</a>
 
-        <a href="/about-team/">
-            About Team
-        </a>
+<a href="/about-team/">About Team</a>
 
-    </div>
+</div>
 
-    <p>
-        © CTARA, IIT Bombay.
-        All rights reserved.
-    </p>
+<p>
+
+© CTARA, IIT Bombay. All rights reserved.
+
+</p>
 
 </footer>
 
@@ -393,4 +399,5 @@ IIT Bombay
 {% endblock %}
 
 </body>
+
 </html>

@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block content %}
+{% block title %}About Team - D-SciMAP Research Lab Portal{% endblock %}
 
+{% block extra_css %}
 <style>
 
 /* .about-header{
@@ -157,21 +158,10 @@
 }
 
 </style>
+{% endblock %}
 
-
-<!-- <div class="about-header">
-
-    <h2>D-SciMAP Research Lab</h2>
-
-    <p>
-        Disaster – Science, Management and Policy Lab
-        <br>
-        Department of Civil Engineering, IIT Bombay
-    </p>
-
-</div> -->
-
-<div class="container style="max-width:1300px;">
+{% block content %}
+<div class="container" style="max-width:1300px;">
 
     <!-- PILLS -->
 
@@ -412,7 +402,9 @@
     </div>
 
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
 
 function showTab(tabId, el){
@@ -437,5 +429,4 @@ function showTab(tabId, el){
 }
 
 </script>
-
 {% endblock %}

@@ -1,6 +1,11 @@
 import json
 import os
+from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
+
 import pandas as pd
+from django.core.cache import cache
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.shortcuts import render
 from shapely.geometry import box
@@ -16,6 +21,19 @@ from backend.monthly_raster import download_raster_monthly_range
 from backend.yearly_raster import download_raster_yearly_range
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# India state boundaries (GeoServer WFS is slow/large — use cached_india_states_geojson + optional local file).
+INDIA_STATES_WFS_URL = (
+    "https://geonode.communitygis.in/geoserver/geonode/ows?"
+    "service=WFS&version=1.0.0&request=GetFeature&typeName=geonode:states_in_india"
+    "&outputFormat=application/json"
+)
+INDIA_STATES_CACHE_KEY = "india_states_geojson_body_v1"
+INDIA_STATES_CACHE_TTL = 86400  # seconds
+
+
+def india_states_local_path():
+    return Path(BASE_DIR) / "data" / "geo" / "india-states.geojson"
 
 
 def precipitation_home(request):
@@ -154,3 +172,43 @@ def download_index_values(request):
     if not os.path.exists(csv_path):
         return HttpResponse("File not found.", status=404)
     return FileResponse(open(csv_path, 'rb'), as_attachment=True, filename='index_values.csv')
+
+
+def cached_india_states_geojson(request):
+    """
+    Serve states_in_india GeoJSON quickly:
+    1) Local file data/geo/india-states.geojson if present (instant, survives restarts)
+    2) Else Django cache
+    3) Else fetch GeoServer, save file + cache
+    """
+    local_path = india_states_local_path()
+    if local_path.exists() and local_path.stat().st_size > 500:
+        response = HttpResponse(local_path.read_bytes(), content_type="application/json")
+        response["Cache-Control"] = "public, max-age=86400"
+        return response
+
+    body = cache.get(INDIA_STATES_CACHE_KEY)
+    if body is None:
+        try:
+            with urlopen(INDIA_STATES_WFS_URL, timeout=120) as resp:
+                body = resp.read()
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            return JsonResponse(
+                {
+                    "type": "FeatureCollection",
+                    "features": [],
+                    "error": "upstream_failed",
+                    "detail": str(exc),
+                },
+                status=502,
+            )
+        cache.set(INDIA_STATES_CACHE_KEY, body, INDIA_STATES_CACHE_TTL)
+        try:
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            local_path.write_bytes(body)
+        except OSError:
+            pass
+
+    response = HttpResponse(body, content_type="application/json")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response

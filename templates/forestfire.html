@@ -1,198 +1,357 @@
+{% extends "base.html" %}
 {% load static %}
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Forest Fire (GeoTIFF)</title>
+{% block title %}Forest Fire Monitoring{% endblock %}
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+{# Hide the top navigation bar #}
+{% block navbar %}
+{% endblock %}
 
-    <!-- GeoTIFF support -->
-    <script src="https://unpkg.com/georaster"></script>
-    <script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+{# ---------- HERO ---------- #}
 
-    <style>
-        body { margin:0; font-family: Arial; }
-        #map { height:100vh; }
+{% block hero_title %}
+Forest Fire Monitoring
+{% endblock %}
 
-        .control-box {
-            position:absolute;
-            top:15px;
-            left:15px;
-            z-index:1000;
-            background:white;
-            padding:12px;
-            border-radius:10px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.2);
-        }
+{% block hero_text %}
 
-        .legend {
-            background:white;
-            padding:10px;
-            border-radius:8px;
-            line-height:18px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.2);
-        }
+Historical Fire Frequency and Hotspot Analysis across Maharashtra
 
-        .legend i {
-            width:18px;
-            height:12px;
-            float:left;
-            margin-right:8px;
-        }
-    </style>
-</head>
+<br><br>
 
-<body>
+
+{% endblock %}
+
+
+{% block extra_css %}
+
+{{ block.super }}
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+
+.wrapper{
+
+    max-width:1300px;
+
+    margin:auto;
+
+    padding:20px;
+
+}
+
+.map-layout{
+
+    display:grid;
+
+    grid-template-columns:20% 80%;
+
+    gap:20px;
+
+}
+
+.sidebar{
+
+    background:white;
+
+    padding:25px;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+}
+
+.sidebar h3{
+
+    color:#004466;
+
+    margin-bottom:20px;
+
+}
+
+.layer{
+
+    display:block;
+
+    padding:14px;
+
+    margin-bottom:10px;
+
+    border-radius:12px;
+
+    background:#f1f5f9;
+
+    color:#222;
+
+    text-decoration:none;
+
+    transition:.25s;
+
+}
+
+.layer:hover{
+
+    background:#dbeafe;
+
+}
+
+.layer.active{
+
+    background:#0077b6;
+
+    color:white;
+
+    font-weight:bold;
+
+}
+
+.layer-options{
+
+    margin:15px 0 20px 15px;
+
+}
+
+.layer-options label{
+
+    display:block;
+
+    margin-bottom:10px;
+
+    cursor:pointer;
+
+}
+
+#map{
+
+    height:650px;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.12);
+
+}
+
+.legend-card{
+
+    margin-top:20px;
+
+    background:white;
+
+    padding:20px;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+}
+.filter-bar{
+
+display:flex;
+
+gap:18px;
+
+align-items:end;
+
+background:white;
+
+padding:18px 20px;
+
+border-radius:16px;
+
+box-shadow:0 4px 15px rgba(0,0,0,.08);
+
+margin-bottom:20px;
+
+flex-wrap:wrap;
+
+}
+
+.filter-item{
+
+flex:1;
+
+min-width:180px;
+
+}
+
+.filter-item label{
+
+display:block;
+
+margin-bottom:6px;
+
+font-weight:600;
+
+color:#004466;
+
+}
+
+@media(max-width:768px){
+
+.map-layout{
+
+grid-template-columns:1fr;
+
+}
+
+#map{
+
+height:450px;
+
+}
+
+}
+
+</style>
+
+{% endblock %}
+
+
+
+{% block content %}
+<h3><center>Forest Fire Frequency (MODIS FIRMS 2005–2024)</center></h3>
+<div class="wrapper">
+    <div class="filter-bar">
+
+        <div class="filter-item">
+            <label>State</label>
+            <select id="stateSelect" class="form-select">
+                <option>Maharashtra</option>
+            </select>
+        </div>
+    
+        <div class="filter-item">
+            <label>District</label>
+            <select id="districtSelect" class="form-select">
+                <option>Select District</option>
+            </select>
+        </div>
+    
+        <div class="filter-item">
+            <label>Taluka</label>
+            <select id="talukaSelect" class="form-select">
+                <option>Select Taluka</option>
+            </select>
+        </div>
+    
+        <div class="filter-item">
+            <label>Village</label>
+            <select id="villageSelect" class="form-select">
+                <option>Select Village</option>
+            </select>
+        </div>
+    
+    </div>
+<div class="map-layout">
+
+<div class="sidebar">
+    
+
+<h3>Map Layers</h3>
+
+<a href="/precipitation/" class="layer">
+🌧 Precipitation
+</a>
+
+<div class="layer active">
+
+🔥 Forest Fire
+
+<div class="layer-options">
+
+<label>
+
+<input type="checkbox"
+       id="freqCheck"
+       checked>
+
+Fire Frequency
+
+</label>
+
+<label>
+
+<input type="checkbox"
+       id="hotspotCheck"
+       checked>
+
+Hotspots
+
+</label>
+<label>
+<input type="checkbox"
+       id="firecountCheck"
+       checked>
+
+Fire Counts
+</label>
+
+</div>
+
+</div>
+
+<a href="/gwpz/" class="layer">
+💧 Ground Water Priority Zone
+</a>
+
+<a href="{% static 'Maha_Suscept.pdf' %}"
+   target="_blank"
+   class="layer">
+
+⛰ Landslide
+
+</a>
+
+<hr>
+
+<a href="/about-team/" class="layer">
+
+👥 Meet Our Team
+
+</a>
+
+</div>
+
+
+
+<div>
 
 <div id="map"></div>
 
-<div class="control-box">
-    <b>Layers</b><br>
-    <input type="checkbox" id="freqCheck" checked> Fire Frequency<br>
-    <input type="checkbox" id="hotspotCheck" checked> Hotspots
+<div class="legend-card">
+
+<h4>Forest Fire Dataset</h4>
+
+<p>
+
+    Forest fire Frequency Map (2005–2024)-This map is generated using MODIS data on a 1 km x 1 km grid, highlights the average annual frequency of Forest fires, identifying areas most at risk over a 20-year period.<br>
+    Hot Spot Analysis of Forest fire Frequency -This map uses the Getis-Ord Gi* statistic to identify statistically significant clusters of high (hotspots) and low (coldspots) Forest fire occurrences.
+</p>
+
 </div>
 
-<script>
+</div>
 
-// Init map
-var map = L.map('map').setView([22,78],6);
+</div>
 
-// Base layer
-L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
-    maxZoom: 20
-}).addTo(map);
+</div>
 
-// 🔥 Load Frequency TIF
-var freqLayer;
-fetch("/static/cropped_frequency.tif")
-  .then(res => res.arrayBuffer())
-  .then(arrayBuffer => parseGeoraster(arrayBuffer))
-  .then(georaster => {
-
-    const min = georaster.mins[0];
-    const max = georaster.maxs[0];
-
-    freqLayer = new GeoRasterLayer({
-        georaster: georaster,
-        opacity: 0.9,
-        noDataValue: 0,
-
-        pixelValuesToColorFn: function(pixelValues) {
-            let val = pixelValues[0];
-
-            if (!val || val <= 0) return null;
-
-            // normalize
-            let n = (val - min) / (max - min);
-
-            // stronger contrast ramp
-            if (n < 0.1) return "#ffffcc";
-            if (n < 0.3) return "#ffeda0";
-            if (n < 0.5) return "#feb24c";
-            if (n < 0.7) return "#fd8d3c";
-            if (n < 0.9) return "#f03b20";
-            return "#bd0026";
-        },
-
-        resolution: 128
-    });
-
-    freqLayer.addTo(map);
-    map.fitBounds(freqLayer.getBounds());
-});
+{% endblock %}
 
 
-// 🔥 Load Hotspot TIF
-var hotspotLayer;
-fetch("/static/cropped_hotspot.tif")
-  .then(res => res.arrayBuffer())
-  .then(arrayBuffer => parseGeoraster(arrayBuffer))
-  .then(georaster => {
 
-    const min = georaster.mins[0];
-    const max = georaster.maxs[0];
+{% block extra_js %}
 
-    hotspotLayer = new GeoRasterLayer({
-        georaster: georaster,
-        opacity: 1,
-        noDataValue: 0,
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-        pixelValuesToColorFn: function(pixelValues) {
-            let val = pixelValues[0];
+<script src="https://unpkg.com/georaster"></script>
 
-            if (!val || val <= 0) return null;
+<script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
 
-            // 🔥 amplify contrast (log scale works better for fire data)
-            let n = (Math.log(val + 1) - Math.log(min + 1)) /
-                    (Math.log(max + 1) - Math.log(min + 1));
+<script src="{% static 'js/forestfire.js' %}"></script>
+<script src="{% static 'js/location_filter.js' %}"></script>
 
-            if (n < 0.25) return "#ffffb2";
-            if (n < 0.5) return "#fd8d3c";
-            if (n < 0.75) return "#f03b20";
-            return "#bd0026";
-        },
-
-        resolution: 128
-    });
-
-    hotspotLayer.addTo(map);
-
-    // ensure visibility
-    hotspotLayer.bringToFront();
-});
-
-setTimeout(() => {
-    if (freqLayer) freqLayer.setOpacity(0.6);   // reduce washout
-    if (hotspotLayer) hotspotLayer.bringToFront();
-}, 1500);
-
-// ✅ Checkbox toggles
-document.getElementById("freqCheck").addEventListener("change", function(){
-    if(freqLayer){
-        this.checked ? map.addLayer(freqLayer) : map.removeLayer(freqLayer);
-    }
-});
-
-document.getElementById("hotspotCheck").addEventListener("change", function(){
-    if(hotspotLayer){
-        this.checked ? map.addLayer(hotspotLayer) : map.removeLayer(hotspotLayer);
-    }
-});
-
-
-// 🌍 Restrict to India
-map.setMaxBounds([
-    [6.5,68],
-    [37.5,97]
-]);
-
-
-// 🧾 Legend
-var legend = L.control({position:'bottomright'});
-legend.onAdd = function(){
-    var div = L.DomUtil.create('div','legend');
-    div.innerHTML = `
-        <b>Fire Frequency</b><br>
-        <i style="background:#ffffb2"></i> Very Low<br>
-        <i style="background:#fecc5c"></i> Low<br>
-        <i style="background:#fd8d3c"></i> Moderate<br>
-        <i style="background:#f03b20"></i> High<br>
-        <i style="background:#bd0026"></i> Very High<br>
-        <br>
-        <b>Hotspots Intensity</b><br>
-        <i style="background:#ffeda0"></i> Low<br>
-        <i style="background:#feb24c"></i> Medium<br>
-        <i style="background:#fd8d3c"></i> High<br>
-        <i style="background:#f03b20"></i> Very High<br>
-        <i style="background:#bd0026"></i> Extreme
-    `;
-    return div;
-};
-legend.addTo(map);
-
-</script>
-
-</body>
-</html>
+{% endblock %}

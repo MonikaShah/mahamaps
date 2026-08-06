@@ -402,13 +402,10 @@ Interactive Spatial Explorer
         </div>
 
 
-        {% static "Maha_Suscept.pdf" as landslide_pdf %}
+        <!-- {% static "Maha_Suscept.pdf" as landslide_pdf %} -->
 
-        <div class="layer"
-            role="button"
-            tabindex="0"
-            onclick="window.open('{{ landslide_pdf }}', '_blank')"
-            onkeydown="if(event.key==='Enter' || event.key===' '){ window.open('{{ landslide_pdf }}', '_blank'); }">
+        <div class="layer" role="button" tabindex="0" onclick="window.location='/landslide/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/landslide/';}">
+
             ⛰️ Landslide
         </div>
         <hr>

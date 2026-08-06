@@ -45,16 +45,10 @@ Historical Fire Frequency and Hotspot Analysis across Maharashtra
 }
 
 .map-layout{
-
-display:grid;
-
-grid-template-columns:260px minmax(700px,1fr) 260px;
-
-gap:20px;
-
-align-items:start;
-
-
+    display:grid;
+    grid-template-columns:260px 1fr;
+    gap:20px;
+    align-items:start;
 }
 
 .sidebar{
@@ -349,6 +343,7 @@ color:#004466;
     border:none;
     border-radius:18px;
     box-shadow:0 5px 20px rgba(0,0,0,.12);
+    background:#fff;
 }
 /* media queries */
 @media(max-width:1100px){
@@ -477,6 +472,7 @@ order:1;
 #map-wrapper{
 
 order:2;
+width:100%;
 
 }
 
@@ -608,7 +604,7 @@ order:4;
         </div>
 
         <!-- Right Panel -->
-        <div class="legend-panel">
+        <!-- <div class="legend-panel">
 
             <div class="legend-header">
                 <b>Report Information</b>
@@ -635,7 +631,7 @@ order:4;
 
             </div>
 
-        </div>
+        </div> -->
 
     </div>
 
@@ -646,13 +642,7 @@ order:4;
         <h4>Landslide Dataset</h4>
 
         <p>
-            The Landslide Susceptibility Map has been prepared using
-            topographic, geological, hydrological and environmental parameters,
-            including slope, aspect, elevation, rainfall, drainage density,
-            land use/land cover and lithology. The map identifies areas that
-            are highly susceptible to landslides and supports disaster risk
-            reduction, watershed management and sustainable planning across
-            Maharashtra.
+            
         </p>
 
     </div>

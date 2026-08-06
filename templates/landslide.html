@@ -1,0 +1,688 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Forest Fire Monitoring{% endblock %}
+
+{# Hide the top navigation bar #}
+{% block navbar %}
+{% endblock %}
+
+{# ---------- HERO ---------- #}
+
+{% block hero_title %}
+Forest Fire Monitoring
+{% endblock %}
+
+{% block hero_text %}
+
+Historical Fire Frequency and Hotspot Analysis across Maharashtra
+
+<br><br>
+
+
+{% endblock %}
+
+
+{% block extra_css %}
+
+{{ block.super }}
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+
+.wrapper{
+
+    width:95%;
+
+    max-width:1600px;
+
+    margin:auto;
+
+    padding:20px;
+
+}
+
+.map-layout{
+
+display:grid;
+
+grid-template-columns:260px minmax(700px,1fr) 260px;
+
+gap:20px;
+
+align-items:start;
+
+
+}
+
+.sidebar{
+
+    background:#fff;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+    padding:25px;
+
+    height:650px;
+
+    display:flex;
+
+    flex-direction:column;
+
+}
+.sidebar,
+.legend-panel{
+
+    height:70vh;
+
+    min-height:500px;
+
+    max-height:750px;
+
+}
+
+.sidebar h3{
+
+    color:#004466;
+
+    margin-bottom:20px;
+
+}
+
+.layer{
+
+    display:block;
+
+    padding:14px;
+
+    margin-bottom:10px;
+
+    border-radius:12px;
+
+    background:#f1f5f9;
+
+    color:#222;
+
+    text-decoration:none;
+
+    transition:.25s;
+
+}
+
+.layer:hover{
+
+    background:#dbeafe;
+
+}
+
+.layer.active{
+
+    background:#0077b6;
+
+    color:white;
+
+    font-weight:bold;
+
+}
+
+.layer-options{
+
+    margin:15px 0 20px 15px;
+
+}
+
+.layer-options label{
+
+    display:block;
+
+    margin-bottom:10px;
+
+    cursor:pointer;
+
+}
+#map-wrapper{
+
+    width:100%;
+
+}
+
+#map{
+
+    width:100%;
+
+    height:70vh;
+
+    min-height:450px;
+
+    max-height:750px;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.12);
+
+}
+
+.dataset-card{
+
+    grid-column:1 / -1;
+
+    background:white;
+
+    padding:25px;
+
+    margin-top:20px;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+}
+.legend-card{
+
+margin-top:25px;
+
+background:white;
+
+padding:28px;
+
+border-radius:16px;
+
+box-shadow:0 5px 18px rgba(0,0,0,.08);
+
+}
+
+.legend-card h4{
+
+color:#004466;
+
+margin-bottom:15px;
+
+font-size:26px;
+
+}
+
+.legend-card p{
+
+font-size:15px;
+
+line-height:1.8;
+
+color:#444;
+
+}
+.legend-panel{
+
+    background:#fff;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+    height:70vh;
+
+    min-height:500px;
+
+    max-height:750px;
+
+    overflow-y:auto;
+
+}
+
+.legend-header{
+
+    background:#004466;
+    color:#fff;
+
+    padding:12px 16px;
+
+    font-size:18px;
+    font-weight:600;
+
+}
+
+#legendContent{
+
+    padding:15px;
+
+}
+
+.legend-section{
+
+    margin-bottom:22px;
+
+}
+
+.legend-section:last-child{
+
+    margin-bottom:0;
+
+}
+
+.legend-section h6{
+
+    font-size:15px;
+
+    font-weight:600;
+
+    color:#004466;
+
+    margin-bottom:10px;
+
+}
+
+.legend-item{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:7px;
+
+    font-size:13px;
+
+    color:#333;
+
+}
+
+.lg{
+
+    width:16px;
+    height:16px;
+
+    border:1px solid #666;
+
+    flex-shrink:0;
+
+}
+.filter-bar{
+
+    display:flex;
+
+    gap:18px;
+
+    align-items:end;
+
+    background:white;
+
+    padding:18px 20px;
+
+    border-radius:16px;
+
+    box-shadow:0 4px 15px rgba(0,0,0,.08);
+
+    margin-bottom:20px;
+
+    flex-wrap:wrap;
+
+    }
+
+.filter-item{
+
+flex:1;
+
+min-width:180px;
+
+}
+
+.filter-item label{
+
+display:block;
+
+margin-bottom:6px;
+
+font-weight:600;
+
+color:#004466;
+
+}
+.pdf-frame{
+    width:100%;
+    height:70vh;
+    min-height:500px;
+    max-height:750px;
+    border:none;
+    border-radius:18px;
+    box-shadow:0 5px 20px rgba(0,0,0,.12);
+}
+/* media queries */
+@media(max-width:1100px){
+
+.map-layout{
+
+    grid-template-columns:1fr;
+
+}
+
+.legend-panel{
+
+    position:relative;
+
+    top:0;
+
+}
+
+.dataset-card{
+
+    grid-column:auto;
+
+}
+
+#map{
+
+    width:100%;
+
+    height:70vh;
+
+    min-height:500px;
+
+    max-height:750px;
+
+    border-radius:18px;
+
+}
+
+}
+@media (max-width:1200px){
+
+.map-layout{
+
+grid-template-columns:240px 1fr;
+
+}
+
+.legend-panel{
+
+grid-column:1 / -1;
+
+width:100%;
+
+position:static;
+
+margin-top:20px;
+
+}
+@media (max-width:768px){
+    
+.map-layout{
+
+    display:flex;
+    flex-direction:column;
+
+}
+
+.sidebar,
+.legend-panel{
+
+    height:auto;
+    max-height:none;
+
+}
+
+#map{
+
+    height:420px;
+
+}
+
+
+
+.wrapper{
+
+width:100%;
+
+padding:12px;
+
+}
+
+.filter-bar{
+
+flex-direction:column;
+
+align-items:stretch;
+
+gap:12px;
+
+}
+
+.filter-item{
+
+width:100%;
+
+min-width:100%;
+
+}
+
+.map-layout{
+
+display:flex;
+
+flex-direction:column;
+
+gap:15px;
+
+}
+
+.sidebar{
+
+order:1;
+
+}
+
+#map-wrapper{
+
+order:2;
+
+}
+
+.legend-panel{
+
+order:3;
+
+width:100%;
+
+position:static;
+
+max-height:none;
+
+}
+
+.legend-card{
+
+order:4;
+
+}
+
+#map{
+
+    height:420px;
+    
+    min-height:420px;
+    
+    }
+
+}
+
+
+}
+</style>
+
+{% endblock %}
+
+
+
+{% block content %}
+
+<h3><center>Landslide Susceptibility Assessment</center></h3>
+
+<div class="wrapper">
+
+    <!-- Filters -->
+    <div class="filter-bar">
+
+        <div class="filter-item">
+            <label>State</label>
+            <select id="stateSelect" class="form-select" disabled>
+                <option>Maharashtra</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
+            <label>District</label>
+            <select id="districtSelect" class="form-select" disabled>
+                <option>Select District</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
+            <label>Taluka</label>
+            <select id="talukaSelect" class="form-select" disabled>
+                <option>Select Taluka</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
+            <label>Village</label>
+            <select id="villageSelect" class="form-select" disabled>
+                <option>Select Village</option>
+            </select>
+        </div>
+
+    </div>
+
+    <div class="map-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+
+            <h3>Map Layers</h3>
+
+            <a href="/precipitation/" class="layer">
+                🌧 Precipitation
+            </a>
+
+            <a href="/ff/" class="layer">
+                🔥 Forest Fire
+            </a>
+
+            <a href="/gwpz/" class="layer">
+                💧 Ground Water Priority Zone
+            </a>
+
+            <div class="layer active">
+
+                ⛰ Landslide
+
+                <div class="layer-options">
+
+                    <label>
+                        <input type="checkbox" checked disabled>
+                        Landslide Susceptibility Report
+                    </label>
+
+                </div>
+
+            </div>
+
+            <hr>
+
+            <a href="/about-team/" class="layer">
+                👥 Meet Our Team
+            </a>
+
+        </div>
+
+        <!-- PDF Viewer -->
+        <div id="map-wrapper">
+
+            <iframe
+                src="{% static 'Maha_Suscept.pdf' %}"
+                class="pdf-frame">
+            </iframe>
+
+        </div>
+
+        <!-- Right Panel -->
+        <div class="legend-panel">
+
+            <div class="legend-header">
+                <b>Report Information</b>
+            </div>
+
+            <div id="legendContent">
+
+                <div class="legend-section">
+
+                    <h6>Contents</h6>
+
+                    <div class="legend-item">📄 Introduction</div>
+                    <div class="legend-item">📊 Data Sources</div>
+                    <div class="legend-item">🛰 Remote Sensing Data</div>
+                    <div class="legend-item">🌧 Rainfall Analysis</div>
+                    <div class="legend-item">⛰ Terrain Parameters</div>
+                    <div class="legend-item">🗺 GIS Processing</div>
+                    <div class="legend-item">📈 Susceptibility Modelling</div>
+                    <div class="legend-item">✔ Validation</div>
+                    <div class="legend-item">📌 Results</div>
+                    <div class="legend-item">📚 References</div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Dataset -->
+
+    <div class="dataset-card">
+
+        <h4>Landslide Dataset</h4>
+
+        <p>
+            The Landslide Susceptibility Map has been prepared using
+            topographic, geological, hydrological and environmental parameters,
+            including slope, aspect, elevation, rainfall, drainage density,
+            land use/land cover and lithology. The map identifies areas that
+            are highly susceptible to landslides and supports disaster risk
+            reduction, watershed management and sustainable planning across
+            Maharashtra.
+        </p>
+
+    </div>
+
+    <div class="dataset-card">
+
+        <h4>Landslide Susceptibility Report</h4>
+
+        <p>
+            The report displayed above provides the complete methodology,
+            datasets used, preprocessing workflow, susceptibility modelling,
+            validation techniques and interpretation of the Landslide
+            Susceptibility Assessment.
+        </p>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/georaster"></script>
+
+<script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+
+
+{% endblock %}

@@ -16,7 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import home,gwpz_view,ff_view,about_team, districts_api,talukas_api,villages_api,village_boundary_api
+from .views import home,gwpz_view,ff_view,about_team, districts_api,talukas_api,villages_api,village_boundary_api,landslide_view
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,6 +27,7 @@ urlpatterns = [
     path('precipitation/', include('precipitation.urls')),
     path('gwpz/', gwpz_view, name='gwpz'),  # Temporary, replace with gwpz_view when ready
     path('ff/', ff_view, name='ff'),  # Temporary, replace with gwpz_view when ready
+    path('landslide/', landslide_view, name='landslide'),  # Temporary, replace with landslide_view when ready
     path('about-team/', about_team, name='about_team'),
     path(
         "api/districts/",
@@ -46,3 +49,13 @@ urlpatterns = [
         village_boundary_api
     ),
 ]
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.MEDIA_URL,
+        document_root=settings.MEDIA_ROOT
+    )
+
+    urlpatterns += static(
+        settings.STATIC_URL,
+        document_root=settings.STATIC_ROOT
+    )

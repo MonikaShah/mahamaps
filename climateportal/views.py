@@ -16,6 +16,8 @@ def gwpz_view(request):
     return render(request, "gwpz.html")
 def ff_view(request):
     return render(request, "forestfire.html")
+def landslide_view(request):
+    return render(request, "landslide.html")
 
 
 

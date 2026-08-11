@@ -1,0 +1,788 @@
+/* ============================================================
+   RAINFALL MONITORING
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   MAIN RAINFALL PAGE
+   ------------------------------------------------------------ */
+
+.rainfall-page {
+    width: 100%;
+}
+
+
+/* ============================================================
+   RAINFALL FILTER / AGGREGATION CARD
+   ============================================================ */
+
+.rainfall-filter-bar {
+    width: 100%;
+    background: #ffffff;
+    padding: 18px 20px;
+    border-radius: 14px;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+}
+
+
+/* ------------------------------------------------------------
+   AGGREGATION TITLE
+   ------------------------------------------------------------ */
+
+.aggregation-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #004466;
+    margin-bottom: 12px;
+}
+
+
+/* ============================================================
+   AGGREGATION OPTIONS
+   ============================================================ */
+
+.rainfall-aggregation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 22px;
+}
+
+
+/* Individual radio option */
+
+.aggregation-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+
+/* Radio button */
+
+.aggregation-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+
+    margin: 0;
+
+    accent-color: #006fb3;
+
+    cursor: pointer;
+}
+
+
+/* Selected option */
+
+.aggregation-option input[type="radio"]:checked + span {
+    color: #004466;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   DAILY DATE CONTROLS
+   ============================================================ */
+
+#daily-date-container {
+    display: flex;
+    gap: 18px;
+
+    margin-top: 16px;
+    padding-top: 14px;
+
+    border-top: 1px solid #e5e5e5;
+}
+
+
+/* ============================================================
+   PERIOD CONTROLS
+   ============================================================ */
+
+#aggregation-period-container {
+    display: none;
+
+    gap: 18px;
+
+    margin-top: 16px;
+    padding-top: 14px;
+
+    border-top: 1px solid #e5e5e5;
+}
+
+
+/* ------------------------------------------------------------
+   FILTER ITEM
+   ------------------------------------------------------------ */
+
+.rainfall-filter-item {
+    flex: 1;
+    min-width: 220px;
+}
+
+
+/* Label */
+
+.rainfall-filter-item label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    color: #004466;
+}
+
+
+/* ============================================================
+   DATE INPUTS
+   ============================================================ */
+
+.rainfall-filter-item input[type="date"],
+.rainfall-filter-item select,
+#rainfallPeriod,
+#aggregationYear,
+#aggregationPeriod {
+    width: 100%;
+
+    height: 40px;
+
+    padding: 7px 11px;
+
+    border: 1px solid #d5dbe0;
+    border-radius: 7px;
+
+    background: #ffffff;
+
+    font-size: 14px;
+    color: #333;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/* Focus */
+
+.rainfall-filter-item input[type="date"]:focus,
+.rainfall-filter-item select:focus,
+#rainfallPeriod:focus,
+#aggregationYear:focus,
+#aggregationPeriod:focus {
+    border-color: #0074b8;
+
+    box-shadow:
+        0 0 0 3px rgba(0, 116, 184, 0.12);
+}
+
+
+/* ============================================================
+   PERIOD SELECT CONTAINER
+   ============================================================ */
+
+#rainfall-period-container {
+    margin-top: 16px;
+}
+
+
+#rainfall-period-container .legend-title {
+    margin-bottom: 8px;
+}
+
+
+/* ============================================================
+   OLD APPLY BUTTON
+   Keep hidden in case HTML still contains it
+   ============================================================ */
+
+.rainfall-button {
+    display: none !important;
+}
+
+
+.rainfall-button button {
+    display: none !important;
+}
+
+
+/* ============================================================
+   MAP AREA
+   ============================================================ */
+
+.rainfall-map {
+    width: 100%;
+    height: 75vh;
+    min-height: 600px;
+
+    border-radius: 8px;
+
+    overflow: hidden;
+}
+
+
+/* Leaflet map */
+
+#rainfallMap {
+    width: 100%;
+    height: 100%;
+}
+
+
+/* ============================================================
+   RAINFALL LAYOUT
+   ============================================================ */
+
+.rainfall-content {
+    display: grid;
+
+    grid-template-columns:
+        200px
+        minmax(600px, 1fr)
+        200px;
+
+    gap: 14px;
+
+    width: 100%;
+}
+
+
+/* ============================================================
+   LEFT SIDEBAR
+   ============================================================ */
+
+.rainfall-sidebar {
+    padding: 18px;
+
+    background: #ffffff;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 14px rgba(0, 0, 0, 0.08);
+
+    overflow-y: auto;
+}
+
+
+/* Sidebar heading */
+
+.rainfall-sidebar h5 {
+    margin: 0 0 16px 0;
+
+    font-size: 21px;
+
+    font-weight: 600;
+
+    color: #004466;
+}
+
+
+/* ============================================================
+   MAP LAYERS
+   ============================================================ */
+
+.rainfall-sidebar .layer-item {
+    margin-bottom: 10px;
+}
+
+
+/* ============================================================
+   RAINFALL AGGREGATION IN SIDEBAR
+   ============================================================ */
+
+.rainfall-sidebar .rainfall-aggregation {
+    display: block;
+}
+
+
+.rainfall-sidebar .rainfall-option {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-bottom: 11px;
+
+    cursor: pointer;
+
+    font-size: 13px;
+}
+
+
+/* Sidebar checkbox */
+
+.rainfall-sidebar .rainfall-option input {
+    width: 15px;
+    height: 15px;
+
+    cursor: pointer;
+}
+
+
+/* ============================================================
+   PERIOD SELECT IN SIDEBAR
+   ============================================================ */
+
+#rainfall-period-container {
+    margin-top: 16px;
+}
+
+
+#rainfall-period-container .legend-title {
+    display: block;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    color: #ffffff;
+
+    margin-bottom: 7px;
+}
+
+
+#rainfallPeriod {
+    height: 38px;
+
+    width: 100%;
+
+    border: none;
+
+    border-radius: 6px;
+
+    padding: 6px 9px;
+
+    font-size: 13px;
+}
+
+
+/* ============================================================
+   RIGHT LEGEND
+   ============================================================ */
+
+.rainfall-legend {
+    background: #ffffff;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 14px rgba(0, 0, 0, 0.08);
+
+    overflow: hidden;
+}
+
+
+/* Legend heading */
+
+.rainfall-legend h5,
+.rainfall-legend-header {
+    margin: 0;
+
+    padding: 13px 14px;
+
+    background: #004466;
+
+    color: #ffffff;
+
+    font-size: 15px;
+
+    font-weight: 600;
+}
+
+
+/* Legend content */
+
+.rainfall-legend-content {
+    padding: 14px;
+}
+
+
+/* ============================================================
+   LEGEND TITLE
+   ============================================================ */
+
+.legend-title {
+    font-size: 13px;
+
+    font-weight: 600;
+
+    color: #004466;
+
+    margin-bottom: 12px;
+}
+
+
+/* ============================================================
+   LEGEND ITEMS
+   ============================================================ */
+
+.legend-item {
+    display: flex;
+
+    align-items: center;
+
+    margin-bottom: 9px;
+
+    font-size: 12px;
+
+    color: #333;
+}
+
+
+/* ============================================================
+   LEGEND COLOR BOX
+   ============================================================ */
+
+.legend-box {
+    flex-shrink: 0;
+
+    width: 17px;
+    height: 17px;
+
+    margin-right: 8px;
+
+    border: 1px solid #777;
+}
+
+
+/* ============================================================
+   RAINFALL COLORS
+   ============================================================ */
+
+.rainfall-1 {
+    background: #ffffcc;
+}
+
+.rainfall-2 {
+    background: #a1d76a;
+}
+
+.rainfall-3 {
+    background: #41ab5d;
+}
+
+.rainfall-4 {
+    background: #238443;
+}
+
+.rainfall-5 {
+    background: #005a32;
+}
+
+.rainfall-no-data {
+    background: #eeeeee;
+}
+
+
+/* ============================================================
+   MAP LAYER SIDEBAR
+   ============================================================ */
+
+.map-layer-section {
+    margin-bottom: 10px;
+}
+
+
+/* ============================================================
+   RAINFALL POPUP
+   ============================================================ */
+
+.rainfall-popup {
+    min-width: 170px;
+
+    text-align: center;
+}
+
+
+.rainfall-popup h6 {
+    margin: 0 0 8px 0;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    color: #004466;
+}
+
+
+.rainfall-popup div {
+    font-size: 12px;
+
+    color: #555;
+}
+
+
+.rainfall-popup strong {
+    display: block;
+
+    margin-top: 7px;
+
+    font-size: 18px;
+
+    color: #004466;
+}
+
+
+/* ============================================================
+   LEAFLET TOOLTIP
+   ============================================================ */
+
+.leaflet-tooltip {
+    font-size: 12px;
+
+    border-radius: 5px;
+}
+
+
+/* ============================================================
+   LEAFLET POPUP
+   ============================================================ */
+
+.leaflet-popup-content {
+    margin: 12px;
+}
+
+
+/* ============================================================
+   HORIZONTAL RULE
+   ============================================================ */
+
+.rainfall-sidebar hr {
+    margin: 18px 0;
+
+    border: 0;
+
+    border-top: 1px solid #ddd;
+}
+
+
+/* ============================================================
+   DESKTOP IMPROVEMENTS
+   ============================================================ */
+
+@media (min-width: 1200px) {
+
+    .rainfall-filter-bar {
+        padding: 18px 20px;
+    }
+
+    .rainfall-content {
+        grid-template-columns:
+            200px
+            minmax(700px, 1fr)
+            200px;
+    }
+
+}
+
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 1100px) {
+
+    .rainfall-content {
+        grid-template-columns:
+            190px
+            minmax(500px, 1fr)
+            190px;
+
+        gap: 10px;
+    }
+
+    .rainfall-sidebar {
+        padding: 15px;
+    }
+
+    .rainfall-sidebar h5 {
+        font-size: 19px;
+    }
+
+    .rainfall-map {
+        min-height: 550px;
+    }
+
+}
+
+
+/* ============================================================
+   TABLET / SMALL LAPTOP
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .rainfall-content {
+        grid-template-columns:
+            180px
+            minmax(450px, 1fr);
+    }
+
+    .rainfall-legend {
+        display: none;
+    }
+
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    /* Filter card */
+
+    .rainfall-filter-bar {
+        padding: 16px;
+
+        border-radius: 12px;
+    }
+
+
+    /* Aggregation */
+
+    .rainfall-aggregation {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 10px;
+    }
+
+
+    .aggregation-option {
+        width: 100%;
+
+        font-size: 14px;
+    }
+
+
+    /* Dates */
+
+    #daily-date-container,
+    #aggregation-period-container {
+
+        flex-direction: column;
+
+        gap: 12px;
+
+        margin-top: 14px;
+
+        padding-top: 12px;
+    }
+
+
+    .rainfall-filter-item {
+        width: 100%;
+
+        min-width: 0;
+    }
+
+
+    /* Main layout */
+
+    .rainfall-content {
+        display: flex;
+
+        flex-direction: column;
+
+        width: 100%;
+    }
+
+
+    /* Sidebar */
+
+    .rainfall-sidebar {
+        width: 100%;
+
+        max-height: none;
+
+        padding: 15px;
+    }
+
+
+    /* Map */
+
+    .rainfall-map {
+        width: 100%;
+
+        height: 65vh;
+
+        min-height: 450px;
+
+        border-radius: 8px;
+    }
+
+
+    /* Legend */
+
+    .rainfall-legend {
+        display: block;
+
+        width: 100%;
+    }
+
+}
+
+
+/* ============================================================
+   SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 480px) {
+
+    .rainfall-filter-bar {
+        padding: 14px;
+    }
+
+
+    .aggregation-title {
+        font-size: 13px;
+    }
+
+
+    .aggregation-option {
+        font-size: 13px;
+    }
+
+
+    .rainfall-filter-item label {
+        font-size: 12px;
+    }
+
+
+    .rainfall-filter-item input[type="date"],
+    .rainfall-filter-item select {
+        height: 38px;
+
+        font-size: 13px;
+    }
+
+
+    .rainfall-map {
+        height: 60vh;
+
+        min-height: 400px;
+    }
+
+
+    .rainfall-sidebar h5 {
+        font-size: 18px;
+    }
+
+}

@@ -1,0 +1,1231 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+Rainfall Monitoring
+{% endblock %}
+
+
+{# =========================================================
+   HIDE TOP NAVIGATION
+========================================================= #}
+
+{% block navbar %}
+{% endblock %}
+
+
+{# =========================================================
+   HERO
+========================================================= #}
+
+{% block hero_title %}
+Rainfall Monitoring
+{% endblock %}
+
+{% block hero_text %}
+Average Daily Rainfall across Maharashtra Districts
+{% endblock %}
+
+
+{# =========================================================
+   CSS
+========================================================= #}
+
+{% block extra_css %}
+
+{{ block.super }}
+
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+
+/* =========================================================
+   MAIN WRAPPER
+========================================================= */
+
+.rainfall-wrapper {
+    width: 95%;
+    max-width: 1600px;
+    margin: auto;
+    padding: 20px;
+}
+
+
+/* =========================================================
+   PAGE TITLE
+========================================================= */
+
+.rainfall-page-title {
+    text-align: center;
+    color: #222;
+    margin-bottom: 20px;
+}
+
+.rainfall-page-title h3 {
+    margin: 0;
+    font-weight: 500;
+}
+
+
+/* =========================================================
+   RAINFALL FILTER BAR
+========================================================= */
+
+.rainfall-filter-bar {
+
+    background: #ffffff;
+
+    padding: 18px 20px;
+
+    border-radius: 16px;
+
+    box-shadow: 0 4px 15px rgba(0,0,0,.08);
+
+    margin-bottom: 20px;
+}
+
+
+/* =========================================================
+   AGGREGATION
+========================================================= */
+
+.rainfall-aggregation-panel {
+    width: 100%;
+}
+
+
+.aggregation-title {
+
+    display: block;
+
+    font-size: 14px;
+
+    font-weight: 700;
+
+    color: #004466;
+
+    margin-bottom: 12px;
+}
+
+
+.aggregation-options {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 22px;
+
+    align-items: center;
+}
+
+
+.aggregation-option {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    cursor: pointer;
+
+    font-size: 14px;
+
+    color: #333;
+
+    font-weight: 500;
+
+    white-space: nowrap;
+}
+
+
+.aggregation-option input {
+
+    width: 16px;
+
+    height: 16px;
+
+    cursor: pointer;
+
+    accent-color: #0077b6;
+}
+
+
+/* =========================================================
+   DATE / PERIOD CONTROLS
+========================================================= */
+
+.rainfall-period-controls {
+
+    display: flex;
+
+    gap: 18px;
+
+    margin-top: 18px;
+
+    flex-wrap: wrap;
+}
+
+
+.rainfall-filter-item {
+
+    flex: 1;
+
+    min-width: 220px;
+}
+
+
+.rainfall-filter-item label {
+
+    display: block;
+
+    margin-bottom: 6px;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    color: #004466;
+}
+
+
+.rainfall-filter-item input,
+.rainfall-filter-item select {
+
+    width: 100%;
+
+    min-height: 40px;
+
+    border-radius: 8px;
+}
+
+
+/* =========================================================
+   MAIN 3 COLUMN LAYOUT
+========================================================= */
+
+.rainfall-map-layout {
+
+    display: grid;
+
+    grid-template-columns:
+        260px
+        minmax(700px, 1fr)
+        260px;
+
+    gap: 20px;
+
+    align-items: start;
+}
+
+
+/* =========================================================
+   LEFT SIDEBAR
+========================================================= */
+
+.rainfall-sidebar-left {
+
+    background: #ffffff;
+
+    border-radius: 18px;
+
+    box-shadow: 0 5px 20px rgba(0,0,0,.08);
+
+    padding: 20px;
+
+    height: 70vh;
+
+    min-height: 500px;
+
+    max-height: 750px;
+
+    overflow-y: auto;
+}
+
+
+.rainfall-sidebar-left h3 {
+
+    color: #004466;
+
+    margin-bottom: 20px;
+
+    font-size: 22px;
+}
+
+
+/* =========================================================
+   LAYER CARDS
+========================================================= */
+
+.rainfall-layer {
+
+    display: block;
+
+    padding: 14px;
+
+    margin-bottom: 10px;
+
+    border-radius: 12px;
+
+    background: #f1f5f9;
+
+    color: #222;
+
+    text-decoration: none;
+
+    transition: .25s;
+}
+
+
+.rainfall-layer:hover {
+
+    background: #dbeafe;
+
+    color: #222;
+}
+
+
+.rainfall-layer.active {
+
+    background: #0077b6;
+
+    color: #ffffff;
+
+    font-weight: 600;
+}
+
+
+.rainfall-layer.active:hover {
+
+    background: #00679d;
+
+    color: #ffffff;
+}
+
+
+/* =========================================================
+   ACTIVE PRECIPITATION CONTENT
+========================================================= */
+
+.rainfall-layer-title {
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    margin-bottom: 8px;
+}
+
+
+/* =========================================================
+   SIDEBAR DESCRIPTION
+========================================================= */
+
+.rainfall-layer-description {
+
+    font-size: 12px;
+
+    line-height: 1.5;
+
+    opacity: .9;
+}
+
+
+/* =========================================================
+   SIDEBAR SEPARATOR
+========================================================= */
+
+.rainfall-sidebar-left hr {
+
+    margin: 18px 0;
+
+    border: 0;
+
+    border-top: 1px solid #ddd;
+}
+
+
+/* =========================================================
+   MAP WRAPPER
+========================================================= */
+
+#rainfall-map-wrapper {
+
+    position: relative;
+
+    width: 100%;
+}
+
+
+/* =========================================================
+   MAP
+========================================================= */
+
+#rainfallMap {
+
+    width: 100%;
+
+    height: 70vh;
+
+    min-height: 500px;
+
+    max-height: 750px;
+
+    border-radius: 18px;
+
+    box-shadow: 0 5px 20px rgba(0,0,0,.12);
+}
+
+
+/* =========================================================
+   COORDINATES BOX
+========================================================= */
+
+#rainfall-coords-box {
+
+    position: absolute;
+
+    left: 12px;
+
+    bottom: 12px;
+
+    background: #ffffff;
+
+    padding: 6px 10px;
+
+    border-radius: 8px;
+
+    font-size: 12px;
+
+    box-shadow: 0 2px 6px rgba(0,0,0,.15);
+
+    z-index: 1000;
+}
+
+
+/* =========================================================
+   MAP LABEL
+========================================================= */
+
+.rainfall-map-label {
+
+    margin-top: 10px;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    color: #004466;
+}
+
+
+/* =========================================================
+   RIGHT LEGEND
+========================================================= */
+
+.rainfall-legend-panel {
+
+    background: #ffffff;
+
+    border-radius: 18px;
+
+    box-shadow: 0 5px 20px rgba(0,0,0,.08);
+
+    height: 70vh;
+
+    min-height: 500px;
+
+    max-height: 750px;
+
+    overflow-y: auto;
+}
+
+
+/* =========================================================
+   LEGEND HEADER
+========================================================= */
+
+.rainfall-legend-header {
+
+    background: #004466;
+
+    color: #ffffff;
+
+    padding: 12px 16px;
+
+    font-size: 18px;
+
+    font-weight: 600;
+
+    border-radius: 18px 18px 0 0;
+}
+
+
+/* =========================================================
+   LEGEND CONTENT
+========================================================= */
+
+.rainfall-legend-content {
+
+    padding: 16px;
+}
+
+
+.rainfall-legend-section {
+
+    margin-bottom: 25px;
+}
+
+
+.rainfall-legend-section h6 {
+
+    color: #004466;
+
+    margin-bottom: 14px;
+
+    font-size: 14px;
+
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   LEGEND ITEM
+========================================================= */
+
+.rainfall-legend-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 10px;
+
+    font-size: 13px;
+}
+
+
+.rainfall-legend-box {
+
+    width: 20px;
+
+    height: 20px;
+
+    border: 1px solid #666;
+
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   RAINFALL COLOURS
+========================================================= */
+
+.rainfall-1 {
+    background: #ffffcc;
+}
+
+.rainfall-2 {
+    background: #a1d76a;
+}
+
+.rainfall-3 {
+    background: #41ab5d;
+}
+
+.rainfall-4 {
+    background: #238443;
+}
+
+.rainfall-5 {
+    background: #005a32;
+}
+
+.rainfall-no-data {
+    background: #d9d9d9;
+}
+
+
+/* =========================================================
+   DATASET CARD
+========================================================= */
+
+.rainfall-dataset-card {
+
+    grid-column: 1 / -1;
+
+    background: #ffffff;
+
+    margin-top: 0;
+
+    padding: 25px;
+
+    border-radius: 18px;
+
+    box-shadow: 0 5px 20px rgba(0,0,0,.08);
+}
+
+
+.rainfall-dataset-card h4 {
+
+    color: #004466;
+
+    margin-bottom: 15px;
+}
+
+
+.rainfall-dataset-card p {
+
+    line-height: 1.8;
+
+    color: #444;
+
+    margin-bottom: 0;
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1200px) {
+
+    .rainfall-map-layout {
+
+        grid-template-columns: 1fr;
+    }
+
+
+    .rainfall-sidebar-left,
+    .rainfall-legend-panel {
+
+        width: 100%;
+
+        height: auto;
+
+        max-height: none;
+    }
+
+
+    #rainfallMap {
+
+        height: 550px;
+
+        max-height: none;
+    }
+
+
+    .rainfall-dataset-card {
+
+        grid-column: auto;
+    }
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .rainfall-wrapper {
+
+        width: 100%;
+
+        padding: 12px;
+    }
+
+
+    .rainfall-page-title h3 {
+
+        font-size: 20px;
+    }
+
+
+    .rainfall-filter-bar {
+
+        padding: 15px;
+    }
+
+
+    .aggregation-options {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 10px;
+    }
+
+
+    .aggregation-option {
+
+        width: 100%;
+    }
+
+
+    .rainfall-period-controls {
+
+        flex-direction: column;
+
+        gap: 12px;
+    }
+
+
+    .rainfall-filter-item {
+
+        width: 100%;
+
+        min-width: 100%;
+    }
+
+
+    .rainfall-map-layout {
+
+        display: flex;
+
+        flex-direction: column;
+
+        gap: 15px;
+    }
+
+
+    .rainfall-sidebar-left {
+
+        order: 1;
+
+        height: auto;
+
+        min-height: auto;
+
+        max-height: none;
+    }
+
+
+    #rainfall-map-wrapper {
+
+        order: 2;
+    }
+
+
+    .rainfall-legend-panel {
+
+        order: 3;
+
+        height: auto;
+
+        min-height: auto;
+
+        max-height: none;
+    }
+
+
+    .rainfall-dataset-card {
+
+        order: 4;
+    }
+
+
+    #rainfallMap {
+
+        height: 420px;
+
+        min-height: 420px;
+
+        max-height: none;
+    }
+
+}
+
+</style>
+
+{% endblock %}
+
+
+{# =========================================================
+   CONTENT
+========================================================= #}
+
+{% block content %}
+
+
+<div class="rainfall-page-title">
+
+    <h3>
+        Average Daily Rainfall
+    </h3>
+
+</div>
+
+
+<div class="rainfall-wrapper">
+
+
+    <!-- =====================================================
+         RAINFALL AGGREGATION / DATE FILTER
+    ====================================================== -->
+
+    <div class="rainfall-filter-bar">
+
+
+        <!-- =================================================
+             AGGREGATION
+        ================================================== -->
+
+        <div class="rainfall-aggregation-panel">
+
+            <label class="aggregation-title">
+                Rainfall Aggregation
+            </label>
+
+
+            <div class="aggregation-options">
+
+
+                <!-- DAILY -->
+
+                <label class="aggregation-option">
+
+                    <input
+                        type="radio"
+                        name="rainfallAggregation"
+                        value="daily"
+                        checked
+                    >
+
+                    <span>
+                        Daily Average
+                    </span>
+
+                </label>
+
+
+                <!-- WEEKLY -->
+
+                <label class="aggregation-option">
+
+                    <input
+                        type="radio"
+                        name="rainfallAggregation"
+                        value="weekly"
+                    >
+
+                    <span>
+                        Weekly Sum
+                    </span>
+
+                </label>
+
+
+                <!-- MONTHLY -->
+
+                <label class="aggregation-option">
+
+                    <input
+                        type="radio"
+                        name="rainfallAggregation"
+                        value="monthly"
+                    >
+
+                    <span>
+                        Monthly Sum
+                    </span>
+
+                </label>
+
+
+                <!-- SEASONAL -->
+
+                <label class="aggregation-option">
+
+                    <input
+                        type="radio"
+                        name="rainfallAggregation"
+                        value="seasonal"
+                    >
+
+                    <span>
+                        Seasonal Sum
+                    </span>
+
+                </label>
+
+
+                <!-- ANNUAL -->
+
+                <label class="aggregation-option">
+
+                    <input
+                        type="radio"
+                        name="rainfallAggregation"
+                        value="annual"
+                    >
+
+                    <span>
+                        Annual Sum
+                    </span>
+
+                </label>
+
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             DAILY DATE RANGE
+
+             Visible by default
+        ================================================== -->
+
+        <div
+            id="daily-date-container"
+            class="rainfall-period-controls"
+        >
+
+
+            <div class="rainfall-filter-item">
+
+                <label for="startDate">
+                    From Date
+                </label>
+
+                <input
+                    type="date"
+                    id="startDate"
+                    class="form-control"
+                    value="2023-01-01"
+                >
+
+            </div>
+
+
+            <div class="rainfall-filter-item">
+
+                <label for="endDate">
+                    To Date
+                </label>
+
+                <input
+                    type="date"
+                    id="endDate"
+                    class="form-control"
+                    value="2023-12-31"
+                >
+
+            </div>
+
+
+        </div>
+
+
+        <!-- =================================================
+             WEEKLY / MONTHLY / SEASONAL / ANNUAL
+
+             Hidden for Daily
+        ================================================== -->
+
+        <div
+            id="aggregation-period-container"
+            class="rainfall-period-controls"
+            style="display: none;"
+        >
+
+
+            <!-- YEAR -->
+
+            <div class="rainfall-filter-item">
+
+                <label for="aggregationYear">
+                    Year
+                </label>
+
+                <select
+                    id="aggregationYear"
+                    class="form-select"
+                >
+                </select>
+
+            </div>
+
+
+            <!-- PERIOD -->
+
+            <div class="rainfall-filter-item">
+
+                <label for="aggregationPeriod">
+                    Period
+                </label>
+
+                <select
+                    id="aggregationPeriod"
+                    class="form-select"
+                >
+                </select>
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         3 COLUMN LAYOUT
+    ====================================================== -->
+
+    <div class="rainfall-map-layout">
+
+
+        <!-- =================================================
+             LEFT SIDEBAR
+        ================================================== -->
+
+        <div class="rainfall-sidebar-left">
+
+
+            <h3>
+                Map Layers
+            </h3>
+
+
+            <!-- PRECIPITATION -->
+
+            <div class="rainfall-layer active">
+
+                <div class="rainfall-layer-title">
+
+                    🌧️ Precipitation
+
+                </div>
+
+
+                <div class="rainfall-layer-description">
+
+                    Maharashtra district rainfall
+
+                    <br>
+
+                    visualization
+
+                </div>
+
+            </div>
+
+
+            <!-- FOREST FIRE -->
+
+            <a
+                href="/ff/"
+                class="rainfall-layer"
+            >
+
+                🔥 Forest Fire
+
+            </a>
+
+
+            <!-- GROUND WATER -->
+
+            <a
+                href="/gwpz/"
+                class="rainfall-layer"
+            >
+
+                💧 Ground Water
+                <br>
+                Priority Zone
+
+            </a>
+
+
+            <!-- LANDSLIDE -->
+
+            <a
+                href="/landslide/"
+                class="rainfall-layer"
+            >
+
+                ▲ Landslide
+
+            </a>
+
+
+            <hr>
+
+
+            <!-- MEET OUR TEAM -->
+
+            <a
+                href="/about-team/"
+                class="rainfall-layer"
+            >
+
+                👥 Meet Our Team
+
+            </a>
+
+
+        </div>
+
+
+        <!-- =================================================
+             MAP
+        ================================================== -->
+
+        <div id="rainfall-map-wrapper">
+
+
+            <div id="rainfallMap">
+            </div>
+
+
+            <div id="rainfall-coords-box">
+            </div>
+
+
+            <div class="rainfall-map-label">
+
+                Maharashtra District Rainfall
+
+            </div>
+
+
+        </div>
+
+
+        <!-- =================================================
+             RIGHT LEGEND
+        ================================================== -->
+
+        <div class="rainfall-legend-panel">
+
+
+            <div class="rainfall-legend-header">
+
+                Legend
+
+            </div>
+
+
+            <div class="rainfall-legend-content">
+
+
+                <div class="rainfall-legend-section">
+
+                    <h6 id="legendAggregationTitle">
+                        Average Daily Rainfall
+                    </h6>
+                
+                    <div class="rainfall-legend-item">
+                        <span class="rainfall-legend-box rainfall-1"></span>
+                        <span id="legendLabel1">0 – 10 mm</span>
+                    </div>
+                
+                    <div class="rainfall-legend-item">
+                        <span class="rainfall-legend-box rainfall-2"></span>
+                        <span id="legendLabel2">10 – 25 mm</span>
+                    </div>
+                
+                    <div class="rainfall-legend-item">
+                        <span class="rainfall-legend-box rainfall-3"></span>
+                        <span id="legendLabel3">25 – 50 mm</span>
+                    </div>
+                
+                    <div class="rainfall-legend-item">
+                        <span class="rainfall-legend-box rainfall-4"></span>
+                        <span id="legendLabel4">50 – 100 mm</span>
+                    </div>
+                
+                    <div class="rainfall-legend-item">
+                        <span class="rainfall-legend-box rainfall-5"></span>
+                        <span id="legendLabel5">&gt; 100 mm</span>
+                    </div>
+                
+                    <div class="rainfall-legend-item">
+                        <span class="rainfall-legend-box rainfall-no-data"></span>
+                        <span id="legendLabelNoData">No data</span>
+                    </div>
+                
+                </div>
+
+
+                    
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             DATASET INFORMATION
+        ================================================== -->
+
+        <div class="rainfall-dataset-card">
+
+
+            <h4>
+                Rainfall Dataset
+            </h4>
+
+
+            <p>
+
+                The rainfall map displays rainfall
+                observations across Maharashtra districts
+                using daily rainfall data.
+
+                <br><br>
+
+                The dataset contains rainfall records
+                from <strong>1981 onwards</strong>.
+                Users can select different aggregation
+                periods to explore rainfall patterns
+                across Maharashtra.
+
+                <br><br>
+
+                For <strong>Daily Average</strong>, users can
+                select a start date and end date.
+
+                For <strong>Weekly, Monthly, Seasonal and
+                Annual</strong> rainfall, users can select
+                the year and corresponding period.
+
+            </p>
+
+
+        </div>
+
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{# =========================================================
+   JAVASCRIPT
+========================================================= #}
+
+{% block extra_js %}
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+<script src="{% static 'js/rainfall.js' %}"></script>
+
+{% endblock %}

@@ -269,19 +269,20 @@ function populateAggregationPeriods(
         const seasons = [
             {
                 value: "winter",
-                label: "Winter"
+                label: "Winter (Jan–Feb)"
+            
             },
             {
                 value: "pre-monsoon",
-                label: "Pre-monsoon"
+                label: "Pre-monsoon (Mar–May)"
             },
             {
                 value: "monsoon",
-                label: "Monsoon"
+                label: "Monsoon (Jun–Sep)"
             },
             {
                 value: "post-monsoon",
-                label: "Post-monsoon"
+                label: "Post-monsoon (Oct–Dec)"
             }
         ];
 
@@ -686,55 +687,157 @@ function districtFeature(
 // RAINFALL COLOUR
 // ============================================================
 
-function getRainfallColor(
-    rainfall
-) {
+// ============================================================
+// RAINFALL COLOUR — DEPENDS ON AGGREGATION
+// ============================================================
+
+function getRainfallColor(rainfall) {
 
     if (
         rainfall === null ||
         rainfall === undefined ||
         rainfall === "" ||
-        isNaN(
-            Number(rainfall)
-        )
+        isNaN(Number(rainfall))
     ) {
-
         return "#d9d9d9";
     }
 
-
-    rainfall =
-        Number(rainfall);
+    rainfall = Number(rainfall);
 
 
-    if (rainfall <= 10) {
+    // ========================================================
+    // DAILY
+    // ========================================================
 
-        return "#ffffcc";
+    if (currentAggregation === "daily") {
+
+        if (rainfall <= 10) {
+            return "#ffffcc";
+        }
+
+        if (rainfall <= 25) {
+            return "#a1d76a";
+        }
+
+        if (rainfall <= 50) {
+            return "#41ab5d";
+        }
+
+        if (rainfall <= 100) {
+            return "#238443";
+        }
+
+        return "#005a32";
     }
 
 
-    if (rainfall <= 25) {
+    // ========================================================
+    // WEEKLY
+    // ========================================================
 
-        return "#a1d76a";
+    if (currentAggregation === "weekly") {
+
+        if (rainfall <= 50) {
+            return "#ffffcc";
+        }
+
+        if (rainfall <= 100) {
+            return "#a1d76a";
+        }
+
+        if (rainfall <= 200) {
+            return "#41ab5d";
+        }
+
+        if (rainfall <= 500) {
+            return "#238443";
+        }
+
+        return "#005a32";
     }
 
 
-    if (rainfall <= 50) {
+    // ========================================================
+    // MONTHLY
+    // ========================================================
 
-        return "#41ab5d";
+    if (currentAggregation === "monthly") {
+
+        if (rainfall <= 100) {
+            return "#ffffcc";
+        }
+
+        if (rainfall <= 250) {
+            return "#a1d76a";
+        }
+
+        if (rainfall <= 500) {
+            return "#41ab5d";
+        }
+
+        if (rainfall <= 1000) {
+            return "#238443";
+        }
+
+        return "#005a32";
     }
 
 
-    if (rainfall <= 100) {
+    // ========================================================
+    // SEASONAL
+    // ========================================================
 
-        return "#238443";
+    if (currentAggregation === "seasonal") {
+
+        if (rainfall <= 250) {
+            return "#ffffcc";
+        }
+
+        if (rainfall <= 500) {
+            return "#a1d76a";
+        }
+
+        if (rainfall <= 1000) {
+            return "#41ab5d";
+        }
+
+        if (rainfall <= 1500) {
+            return "#238443";
+        }
+
+        return "#005a32";
     }
 
 
-    return "#005a32";
+    // ========================================================
+    // ANNUAL
+    // ========================================================
+
+    if (currentAggregation === "annual") {
+
+        if (rainfall <= 500) {
+            return "#ffffcc";
+        }
+
+        if (rainfall <= 1000) {
+            return "#a1d76a";
+        }
+
+        if (rainfall <= 2000) {
+            return "#41ab5d";
+        }
+
+        if (rainfall <= 5000) {
+            return "#238443";
+        }
+
+        return "#005a32";
+    }
+
+
+    // Fallback
+    return "#d9d9d9";
 }
-
-
 // ============================================================
 // GET AGGREGATION LABEL
 // ============================================================
@@ -1167,7 +1270,509 @@ async function loadRainfall() {
         updateLegendTitle();
 
 
-    } catch (error) {
+    } catch (error) {// ============================================================
+        // LOAD RAINFALL FROM API
+        // ============================================================
+        
+        async function loadRainfall() {
+        
+            const year =
+                parseInt(aggregationYear.value);
+        
+            let start = null;
+            let end = null;
+        
+        
+            // ========================================================
+            // DAILY
+            // ========================================================
+        
+            if (currentAggregation === "daily") {
+        
+                start = startDate.value;
+                end = endDate.value;
+        
+                if (!start || !end) {
+        
+                    console.warn(
+                        "Daily dates missing"
+                    );
+        
+                    return;
+                }
+        
+            }
+        
+        
+            // ========================================================
+            // WEEKLY
+            // ========================================================
+        
+            else if (currentAggregation === "weekly") {
+        
+                const week =
+                    parseInt(
+                        aggregationPeriod.value
+                    );
+        
+                if (!year || !week) {
+        
+                    console.warn(
+                        "Year or week missing"
+                    );
+        
+                    return;
+                }
+        
+        
+                const dates =
+                    getWeekDates(
+                        year,
+                        week
+                    );
+        
+                start = dates.start;
+                end = dates.end;
+        
+            }
+        
+        
+            // ========================================================
+            // MONTHLY
+            // ========================================================
+        
+            else if (currentAggregation === "monthly") {
+        
+                const month =
+                    parseInt(
+                        aggregationPeriod.value
+                    );
+        
+                if (!year || !month) {
+        
+                    console.warn(
+                        "Year or month missing"
+                    );
+        
+                    return;
+                }
+        
+        
+                // First day of month
+        
+                const firstDay =
+                    new Date(
+                        year,
+                        month - 1,
+                        1
+                    );
+        
+        
+                // Last day of month
+        
+                const lastDay =
+                    new Date(
+                        year,
+                        month,
+                        0
+                    );
+        
+        
+                start =
+                    formatDate(
+                        firstDay
+                    );
+        
+                end =
+                    formatDate(
+                        lastDay
+                    );
+        
+            }
+        
+        
+            // ========================================================
+            // SEASONAL
+            // ========================================================
+        
+            else if (currentAggregation === "seasonal") {
+        
+                const season =
+                    aggregationPeriod.value;
+        
+        
+                if (!year || !season) {
+        
+                    console.warn(
+                        "Year or season missing"
+                    );
+        
+                    return;
+                }
+        
+        
+                // ----------------------------------------------------
+                // WINTER
+                // January - February
+                // ----------------------------------------------------
+        
+                if (season === "winter") {
+        
+                    start =
+                        `${year}-01-01`;
+        
+                    end =
+                        `${year}-02-28`;
+        
+        
+                    // Leap year
+        
+                    if (
+                        year % 4 === 0 &&
+                        (
+                            year % 100 !== 0 ||
+                            year % 400 === 0
+                        )
+                    ) {
+        
+                        end =
+                            `${year}-02-29`;
+                    }
+        
+                }
+        
+        
+                // ----------------------------------------------------
+                // PRE-MONSOON
+                // March - May
+                // ----------------------------------------------------
+        
+                else if (
+                    season === "pre-monsoon"
+                ) {
+        
+                    start =
+                        `${year}-03-01`;
+        
+                    end =
+                        `${year}-05-31`;
+        
+                }
+        
+        
+                // ----------------------------------------------------
+                // MONSOON
+                // June - September
+                // ----------------------------------------------------
+        
+                else if (
+                    season === "monsoon"
+                ) {
+        
+                    start =
+                        `${year}-06-01`;
+        
+                    end =
+                        `${year}-09-30`;
+        
+                }
+        
+        
+                // ----------------------------------------------------
+                // POST-MONSOON
+                // October - December
+                // ----------------------------------------------------
+        
+                else if (
+                    season === "post-monsoon"
+                ) {
+        
+                    start =
+                        `${year}-10-01`;
+        
+                    end =
+                        `${year}-12-31`;
+        
+                }
+        
+            }
+        
+        
+            // ========================================================
+            // ANNUAL
+            // ========================================================
+        
+            else if (currentAggregation === "annual") {
+        
+                if (!year) {
+        
+                    console.warn(
+                        "Year missing"
+                    );
+        
+                    return;
+                }
+        
+        
+                start =
+                    `${year}-01-01`;
+        
+                end =
+                    `${year}-12-31`;
+        
+            }
+        
+        
+            // ========================================================
+            // VALIDATE DATE RANGE
+            // ========================================================
+        
+            if (!start || !end) {
+        
+                console.warn(
+                    "Could not determine rainfall date range:",
+                    {
+                        aggregation:
+                            currentAggregation,
+        
+                        year:
+                            year,
+        
+                        period:
+                            aggregationPeriod.value,
+        
+                        start:
+                            start,
+        
+                        end:
+                            end
+                    }
+                );
+        
+                return;
+            }
+        
+        
+            if (start > end) {
+        
+                console.error(
+                    "Invalid rainfall date range:",
+                    start,
+                    end
+                );
+        
+                return;
+            }
+        
+        
+            // ========================================================
+            // BUILD API URL
+            // ========================================================
+        
+            const url =
+                `/api/rainfall-districts/` +
+                `?aggregation=${encodeURIComponent(
+                    currentAggregation
+                )}` +
+                `&start_date=${encodeURIComponent(
+                    start
+                )}` +
+                `&end_date=${encodeURIComponent(
+                    end
+                )}`;
+        
+        
+            // ========================================================
+            // DEBUG
+            // ========================================================
+        
+            console.log(
+                "================================="
+            );
+        
+            console.log(
+                "RAINFALL REQUEST"
+            );
+        
+            console.log(
+                "Aggregation:",
+                currentAggregation
+            );
+        
+            console.log(
+                "Year:",
+                year
+            );
+        
+            console.log(
+                "Period:",
+                aggregationPeriod.value
+            );
+        
+            console.log(
+                "Start date:",
+                start
+            );
+        
+            console.log(
+                "End date:",
+                end
+            );
+        
+            console.log(
+                "URL:",
+                url
+            );
+        
+            console.log(
+                "================================="
+            );
+        
+        
+            // ========================================================
+            // FETCH
+            // ========================================================
+        
+            try {
+        
+                const response =
+                    await fetch(url);
+        
+        
+                const responseText =
+                    await response.text();
+        
+        
+                console.log(
+                    "HTTP STATUS:",
+                    response.status
+                );
+        
+                console.log(
+                    "API RESPONSE:",
+                    responseText
+                );
+        
+        
+                // ====================================================
+                // HANDLE ERROR
+                // ====================================================
+        
+                if (!response.ok) {
+        
+                    console.error(
+                        "Rainfall API error:",
+                        response.status,
+                        responseText
+                    );
+        
+                    return;
+                }
+        
+        
+                // ====================================================
+                // PARSE JSON
+                // ====================================================
+        
+                let result;
+        
+                try {
+        
+                    result =
+                        JSON.parse(
+                            responseText
+                        );
+        
+                }
+                catch (error) {
+        
+                    console.error(
+                        "Invalid JSON response:",
+                        responseText
+                    );
+        
+                    return;
+                }
+        
+        
+                console.log(
+                    "Rainfall result:",
+                    result
+                );
+        
+        
+                // ====================================================
+                // CLEAR OLD DATA
+                // ====================================================
+        
+                rainfallData = {};
+        
+        
+                // ====================================================
+                // STORE NEW DATA
+                // ====================================================
+        
+                if (
+                    result.data &&
+                    Array.isArray(
+                        result.data
+                    )
+                ) {
+        
+                    result.data.forEach(
+                        item => {
+        
+                            const district =
+                                normalizeDistrict(
+                                    item.district
+                                );
+        
+        
+                            const value =
+                                item.value;
+        
+        
+                            rainfallData[
+                                district
+                            ] = value;
+        
+                        }
+                    );
+        
+                }
+        
+        
+                console.log(
+                    "Updated rainfallData:",
+                    rainfallData
+                );
+        
+        
+                // ====================================================
+                // UPDATE MAP
+                // ====================================================
+        
+                updateMapStyles();
+        
+        
+                // ====================================================
+                // UPDATE LEGEND
+                // ====================================================
+        
+                updateRainfallLegend();
+        
+        
+            }
+            catch (error) {
+        
+                console.error(
+                    "Rainfall fetch error:",
+                    error
+                );
+        
+            }
+        
+        }
 
         console.error(
             "Rainfall fetch error:",
@@ -1316,19 +1921,19 @@ function updateRainfallLegend() {
             "Weekly Rainfall";
 
         label1.textContent =
-            "0 – 10 mm";
+            "0 – 50 mm";
 
         label2.textContent =
-            "10 – 25 mm";
-
-        label3.textContent =
-            "25 – 50 mm";
-
-        label4.textContent =
             "50 – 100 mm";
 
+        label3.textContent =
+            "100 – 200 mm";
+
+        label4.textContent =
+            "200 – 500 mm";
+
         label5.textContent =
-            "> 100 mm";
+            "> 500 mm";
 
         noData.textContent =
             "No data";
@@ -1347,19 +1952,19 @@ function updateRainfallLegend() {
             "Monthly Rainfall";
 
         label1.textContent =
-            "0 – 10 mm";
+            "0 – 100 mm";
 
         label2.textContent =
-            "10 – 25 mm";
+            "100 – 250 mm";
 
         label3.textContent =
-            "25 – 50 mm";
+            "250 – 500 mm";
 
         label4.textContent =
-            "50 – 100 mm";
+            "500 – 1000 mm";
 
         label5.textContent =
-            "> 100 mm";
+            "> 1000 mm";
 
         noData.textContent =
             "No data";
@@ -1378,19 +1983,19 @@ function updateRainfallLegend() {
             "Seasonal Rainfall";
 
         label1.textContent =
-            "0 – 10 mm";
+            "0 – 250 mm";
 
         label2.textContent =
-            "10 – 25 mm";
+            "250 – 500 mm";
 
         label3.textContent =
-            "25 – 50 mm";
+            "500 – 1000 mm";
 
         label4.textContent =
-            "50 – 100 mm";
+            "1000 – 1500 mm";
 
         label5.textContent =
-            "> 100 mm";
+            "> 1500 mm";
 
         noData.textContent =
             "No data";
@@ -1409,19 +2014,19 @@ function updateRainfallLegend() {
             "Annual Rainfall";
 
         label1.textContent =
-            "0 – 10 mm";
+            "0 – 500 mm";
 
         label2.textContent =
-            "10 – 25 mm";
+            "500 – 1000 mm";
 
         label3.textContent =
-            "25 – 50 mm";
+            "1000 – 2000 mm";
 
         label4.textContent =
-            "50 – 100 mm";
+            "2000 – 5000 mm";
 
         label5.textContent =
-            "> 100 mm";
+            "> 5000 mm";
 
         noData.textContent =
             "No data";
@@ -1869,4 +2474,5 @@ function initializeRainfall() {
 // START APPLICATION
 // ============================================================
 
+updateRainfallLegend();
 initializeRainfall();

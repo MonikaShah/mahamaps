@@ -24,6 +24,16 @@ const osm = L.tileLayer(
         opacity: 0.8
     }
 ).addTo(map);
+const statesWMS = L.tileLayer.wms(
+    "https://geonode.communitygis.in/geoserver/geonode/wms",
+    {
+        layers: "geonode:states_in_india",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        tiled: true
+    }
+).addTo(map);
 
 
 // Initial Maharashtra view

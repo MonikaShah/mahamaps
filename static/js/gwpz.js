@@ -31,12 +31,12 @@ map.on("mousemove", function(e){
 // Base layer (use a provider that doesn't block local/test referrers)
 // OSM volunteers may block tile loading when the request referrer is missing/localhost.
 var baseLayer = L.tileLayer(
-    "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-    {
-        maxZoom: 12,
-        attribution: "&copy; Google",
-        opacity: 0.4
-    }
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+{
+attribution:'OpenStreetMap',
+opacity: 0.8,
+}
 ).addTo(map);
 
 // ✅ YOUR TILE LAYER (from Django static)
@@ -154,39 +154,39 @@ function waitForTiles(layer) {
         // fallback safety
         setTimeout(resolve, 3000);
     });
-}
-var legend = L.control({ position: 'bottomright' });
+ }
+// var legend = L.control({ position: 'bottomright' });
 
-legend.onAdd = function () {
-    var div = L.DomUtil.create('div', 'gwpz-legend');
+// legend.onAdd = function () {
+//     var div = L.DomUtil.create('div', 'gwpz-legend');
 
-    div.innerHTML = `
-        <b>GWPZ (0.55 → 5)</b><br>
-        <i style="background:#d7191c"></i> 0.55 – Critical<br>
-        <i style="background:#fdae61"></i> 1.66 – High<br>
-        <i style="background:#ffffbf"></i> 2.77 – Moderate<br>
-        <i style="background:#abd9e9"></i> 3.88 – Low<br>
-        <i style="background:#2c7bb6"></i> 5.00 – Very Low
+//     div.innerHTML = `
+//         <b>GWPZ (0.55 → 5)</b><br>
+//         <i style="background:#d7191c"></i> 0.55 – Critical<br>
+//         <i style="background:#fdae61"></i> 1.66 – High<br>
+//         <i style="background:#ffffbf"></i> 2.77 – Moderate<br>
+//         <i style="background:#abd9e9"></i> 3.88 – Low<br>
+//         <i style="background:#2c7bb6"></i> 5.00 – Very Low
 
-        <hr>
+//         <hr>
 
-    <b>Watershed Boundary</b><br>
+//     <b>Watershed Boundary</b><br>
 
-    <div>
-        <svg width="30" height="10">
-            <line x1="0" y1="5" x2="30" y2="5"
-                  stroke="#800080"
-                  stroke-width="3"/>
-        </svg>
-        Selected Watershed Level
-    </div>
-    `;
+//     <div>
+//         <svg width="30" height="10">
+//             <line x1="0" y1="5" x2="30" y2="5"
+//                   stroke="#800080"
+//                   stroke-width="3"/>
+//         </svg>
+//         Selected Watershed Level
+//     </div>
+//     `;
 
     
-    return div;
-};
+//     return div;
+// };
 
-legend.addTo(map);
+// legend.addTo(map);
 async function captureMapCanvas() {
     setDownloadStatus('Preparing download...');
     var sourceWrap = document.getElementById('map-wrapper');
@@ -366,7 +366,7 @@ document
 //watershed levels
 let watershedLayer = null;
 
-window.currentWatershedLevel = level;
+window.currentWatershedLevel = 5;
 
 function loadWatershed(level){
 

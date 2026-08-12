@@ -129,21 +129,31 @@ layerFinished();
 // ======================================
 // Fire Frequency Class
 // ======================================
+function getFireClass(value) {
 
-function getFireClass(value){
+    if (value === null || value === undefined || isNaN(value)) {
+        return "No Data";
+    }
 
-    if(value < 0.08) return "Very Low";
-    if(value < 0.12) return "Low";
-    if(value < 0.18) return "Moderate";
-    if(value < 0.30) return "Moderately High";
-    if(value < 0.60) return "High";
-    if(value < 1.00) return "Very High";
-    if(value < 2.00) return "Severe";
+    // Only treat 0 as No Data IF 0 is actually the raster NoData value
+    if (value === 0) {
+        return "No Data";
+    }
 
-    return "Critical";
+    if (value <= 0.056) return "Very Low";
+    if (value <= 0.060) return "Low";
+    if (value <= 0.065) return "Moderately Low";
+    if (value <= 0.070) return "Moderate";
+    if (value <= 0.080) return "Moderately High";
+    if (value <= 0.090) return "High";
+    if (value <= 0.110) return "Very High";
+    if (value <= 0.140) return "Severe";
+    if (value <= 0.180) return "Very Severe";
+    if (value <= 0.250) return "Extreme";
+    if (value <= 0.700) return "Critical";
+
+    return "Exceptional";
 }
-
-
 // ======================================
 // GetFeatureInfo Popup
 // ======================================

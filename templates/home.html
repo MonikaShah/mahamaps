@@ -381,9 +381,9 @@ Interactive Spatial Explorer
     <div class="sidebar">
         <h3>Map Layers</h3>
 
-        <div class="layer" role="button" tabindex="0" onclick="window.location='/precipitation/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
+        <div class="layer" role="button" tabindex="0" onclick="window.location='/rainfall/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/rainfall/';}">
             
-        🌧 Precipitation
+        🌧 Rainfall
 
         </div>
 
@@ -395,7 +395,7 @@ Interactive Spatial Explorer
         </div>
 
 
-        <div class="layer" role="button" tabindex="0" onclick="window.location='/gwpz/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
+        <div class="layer" role="button" tabindex="0" onclick="window.location='/gwpz/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/gwpz/';}">
 
         💧 Ground Water
 
@@ -539,13 +539,13 @@ Research Domains
 
 
 
-<a href="/precipitation/"
+<a href="/rainfall/"
 class="card"
 style="text-decoration:none;color:inherit">
 
 
 <h3>
-🌧 Precipitation
+🌧 Rainfall
 </h3>
 
 
@@ -622,7 +622,7 @@ mapping.
 
 </a>
 
-<a href="{% static 'Maha_Suscept.pdf' %}" class="card" style="text-decoration:none;color:inherit">
+<a href="/landslide/" class="card" style="text-decoration:none;color:inherit">
     <h3>
         ⛰️ Landslide 
     </h3>
@@ -659,7 +659,7 @@ Spatial Application
 <div class="cards">
 
 
-    <div class="card dataset" role="button" tabindex="0" onclick="window.open('https://mandigo.in', '_blank')" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
+    <div class="card dataset" role="button" tabindex="0" onclick="window.open('https://mandigo.in', '_blank')" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/rainfall/';}">
 <h3>
 MandiGo
 </h3>
@@ -712,32 +712,16 @@ Fire occurrence and risk layers
 
 
 </div>
-
-
-
-
-
 {% endblock %}
-
-
-
-
-
-
 
 {% block extra_js %}
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-
 <script>
-
-
 var map = L.map('map').setView(
 [20.59,78.96],
 5
 );
-
 
 L.tileLayer(
 
@@ -769,10 +753,5 @@ L.marker(
 .bindPopup(
 "D-SciMAP Research Location"
 );
-
-
-
 </script>
-
-
 {% endblock %}

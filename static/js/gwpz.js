@@ -7,9 +7,7 @@ var map = L.map('map', {
 L.control.zoom({
     position: 'topright'
 }).addTo(map);
-L.control.zoom({
-    position: 'bottomright'
-}).addTo(map);
+
 L.control.scale({
     metric:true,
     imperial:false
@@ -49,10 +47,10 @@ var gwpz = L.tileLayer('/static/gwpz_tiles/{z}/{x}/{y}.png', {
     crossOrigin: true
 }).addTo(map);
 
-// Optional control
-L.control.layers(null, {
-    "gwpz": gwpz
-}).addTo(map);
+// Optional controll
+// L.control.layers(null, {
+//     "gwpz": gwpz
+// }).addTo(map);
 
 // ✅ India bounds
 var indiaBounds = L.latLngBounds(
@@ -362,18 +360,34 @@ document
     loadWatershed(this.value);
 });
 
-
+console.log("watershed level radio buttons connected", document.getElementById("watershed-level").value);
 //watershed levels
+// ======================================
+// Watershed Levels
+// ======================================
+
 let watershedLayer = null;
 
 window.currentWatershedLevel = 5;
 
-function loadWatershed(level){
 
-    if(watershedLayer){
+// ======================================
+// Load Watershed Layer
+// ======================================
+
+function loadWatershed(level) {
+
+    console.log("Loading watershed level:", level);
+
+    // Store selected level
+    window.currentWatershedLevel = Number(level);
+
+    // Remove previous watershed layer
+    if (watershedLayer && map.hasLayer(watershedLayer)) {
         map.removeLayer(watershedLayer);
     }
 
+    // Create WMS layer
     watershedLayer = L.tileLayer.wms(
         "https://geonode.communitygis.in/geoserver/geonode/wms",
         {
@@ -381,16 +395,85 @@ function loadWatershed(level){
             format: "image/png",
             transparent: true,
             version: "1.1.1",
-            tiled: true
+            tiled: true,
+            opacity: 1
         }
     );
 
-    if(document.getElementById("toggle-watershed").checked){
+    // Add layer if checkbox is checked
+    const toggle = document.getElementById("toggle-watershed");
+
+    if (toggle && toggle.checked) {
         watershedLayer.addTo(map);
     }
 
+    // Keep watershed above other map layers
     watershedLayer.bringToFront();
+
+    console.log(
+        "Watershed layer:",
+        `geonode:india_watershed_level${level}`
+    );
 }
+
+
+// ======================================
+// Watershed Level Dropdown
+// ======================================
+
+document
+    .getElementById("watershed-level")
+    .addEventListener("change", function () {
+
+        const level = this.value;
+
+        console.log("Selected watershed level:", level);
+
+        loadWatershed(level);
+
+    });
+
+
+// ======================================
+// Watershed Visibility Toggle
+// ======================================
+
+document
+    .getElementById("toggle-watershed")
+    .addEventListener("change", function () {
+
+        if (!watershedLayer) {
+
+            // Layer doesn't exist yet.
+            // Load the currently selected level.
+            loadWatershed(
+                document.getElementById("watershed-level").value
+            );
+
+            return;
+        }
+
+        if (this.checked) {
+
+            map.addLayer(watershedLayer);
+            watershedLayer.bringToFront();
+
+        } else {
+
+            map.removeLayer(watershedLayer);
+
+        }
+
+    });
+
+
+// ======================================
+// INITIAL LOAD
+// ======================================
+
+// Level 5 is selected in HTML
+// Watershed checkbox is also checked
+loadWatershed(5);
 
 map.on("click", function(e){
 
@@ -429,18 +512,18 @@ function getWatershedInfo(latlng){
 
     fetch(url)
         .then(r => r.json())
-        .then(r => r.json())
+        
         .then(data => showWatershedPopup(data, latlng));
 }
 
-function showWatershedPopup(data){
+function showWatershedPopup(data,latlng){
 
     if(!data.features.length) return;
 
     const p = data.features[0].properties;
 
     L.popup()
-        .setLatLng(map.mouseEventToLatLng(window.event))
+        .setLatLng(map.mouseEventToLatLng(latlng))
         .setContent(`
             <b>Watershed Information</b><hr>
 

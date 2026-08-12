@@ -122,38 +122,10 @@ freqLayer = L.tileLayer.wms(
         tiled: true,
         opacity: 0.65
     }
-).addTo(map);
+);
 map.getContainer().style.cursor = "crosshair";
 layerFinished();
-// ======================================
-// WMS GetFeatureInfo
-// ======================================
 
-function getFireClass(value){
-
-    if(value < 0.08)
-        return "Very Low";
-
-    if(value < 0.12)
-        return "Low";
-
-    if(value < 0.18)
-        return "Moderate";
-
-    if(value < 0.30)
-        return "Moderately High";
-
-    if(value < 0.60)
-        return "High";
-
-    if(value < 1.00)
-        return "Very High";
-
-    if(value < 2.00)
-        return "Severe";
-
-    return "Critical";
-}
 // ======================================
 // Fire Frequency Class
 // ======================================
@@ -294,9 +266,9 @@ hotspotLayer = L.tileLayer.wms(
         tiled: true,
         opacity: 1.0
     }
-).addTo(map);
+);
 
-hotspotLayer.bringToFront();
+// hotspotLayer.bringToFront();
 
 layerFinished();
 
@@ -473,7 +445,7 @@ fireCountLayer = L.tileLayer.wms(
         tiled: true,
         opacity: 0.75
     }
-).addTo(map);
+);
 
 console.log("Fire Count layer created:", fireCountLayer);
 
@@ -481,6 +453,11 @@ console.log("Fire Count layer created:", fireCountLayer);
 // fireCountLayer.addTo(map);
 
 layerFinished();
+
+freqLayer.setZIndex(10);
+hotspotLayer.setZIndex(20);
+fireCountLayer.setZIndex(30);
+statesWMS.setZIndex(40);
 
 // ======================================
 // Fire Count GetFeatureInfo Popup
@@ -559,7 +536,7 @@ map.on("click", function (e) {
                     </tr>
 
                     <tr>
-                        <th>Average Frequency</th>
+                        <th>Average Frequency per Year</th>
                         <td>${p.joint_aver ?? "-"}</td>
                     </tr>
 
@@ -574,21 +551,82 @@ map.on("click", function (e) {
 
 });
 // ======================================
+// Keep Hotspots Above Frequency
+// ======================================
+
+// map.on("layeradd", function () {
+//     if (map.hasLayer(freqLayer))
+//         freqLayer.bringToBack();
+
+//     if (map.hasLayer(fireCountLayer))
+//         fireCountLayer.bringToFront();
+
+//     if (map.hasLayer(hotspotLayer)) {
+//         hotspotLayer.bringToFront();
+//     }
+
+//     if (map.hasLayer(statesWMS)) {
+//         statesWMS.bringToFront();
+//     }
+
+// });
+
+const legendToggle = document.getElementById("legendToggle");
+const legendContent = document.getElementById("legendContent");
+
+legendToggle.onclick = function(){
+
+    if(legendContent.style.display==="none"){
+
+        legendContent.style.display="block";
+        legendToggle.innerHTML="−";
+
+    }else{
+
+        legendContent.style.display="none";
+        legendToggle.innerHTML="+";
+    }
+
+};
+
+function updateLegend(){
+
+    document.getElementById("freqLegend").style.display =
+        map.hasLayer(freqLayer) ? "block":"none";
+
+    document.getElementById("hotspotLegend").style.display =
+        map.hasLayer(hotspotLayer) ? "block":"none";
+
+    document.getElementById("firecountLegend").style.display =
+        map.hasLayer(fireCountLayer) ? "block":"none";
+
+}
+
+// ======================================
 // Layer Toggle
 // ======================================
 
-document.getElementById("freqCheck").addEventListener("change", function () {
+const freqCheck = document.getElementById("freqCheck");
+const hotspotCheck = document.getElementById("hotspotCheck");
+const firecountCheck = document.getElementById("firecountCheck");
+
+
+freqCheck.addEventListener("change", function () {
+
+    console.log("Frequency checkbox:", this.checked);
 
     if (this.checked) {
         map.addLayer(freqLayer);
+        freqLayer.setOpacity(0.65);
     } else {
         map.removeLayer(freqLayer);
     }
 
+    updateLegend();
 });
 
 
-document.getElementById("hotspotCheck").addEventListener("change", function () {
+hotspotCheck.addEventListener("change", function () {
 
     if (this.checked) {
         map.addLayer(hotspotLayer);
@@ -597,36 +635,38 @@ document.getElementById("hotspotCheck").addEventListener("change", function () {
         map.removeLayer(hotspotLayer);
     }
 
+    updateLegend();
 });
 
-document.getElementById("firecountCheck")
-.addEventListener("change", function () {
+
+firecountCheck.addEventListener("change", function () {
 
     if (this.checked) {
         map.addLayer(fireCountLayer);
+        fireCountLayer.bringToFront();
     } else {
         map.removeLayer(fireCountLayer);
     }
 
+    updateLegend();
 });
 
 // ======================================
-// Keep Hotspots Above Frequency
+// Initial Layer State
 // ======================================
 
-map.on("layeradd", function () {
-    if (map.hasLayer(freqLayer))
-        freqLayer.bringToBack();
+if (freqCheck.checked) {
+    map.addLayer(freqLayer);
+}
 
-    if (map.hasLayer(fireCountLayer))
-        fireCountLayer.bringToFront();
+if (hotspotCheck.checked) {
+    map.addLayer(hotspotLayer);
+}
 
-    if (map.hasLayer(hotspotLayer)) {
-        hotspotLayer.bringToFront();
-    }
+if (firecountCheck.checked) {
+    map.addLayer(fireCountLayer);
+}
 
-    if (map.hasLayer(statesWMS)) {
-        statesWMS.bringToFront();
-    }
 
-});
+
+updateLegend();

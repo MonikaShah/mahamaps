@@ -1,0 +1,852 @@
+/* ============================================================
+   TEMPERATURE MONITORING
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   MAIN TEMPERATURE PAGE
+   ------------------------------------------------------------ */
+
+.temperature-page {
+    width: 100%;
+}
+
+
+/* ============================================================
+   TEMPERATURE FILTER / AGGREGATION CARD
+   ============================================================ */
+
+.temperature-filter-bar {
+    width: 100%;
+    background: #ffffff;
+    padding: 18px 20px;
+    border-radius: 14px;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+}
+
+
+/* ------------------------------------------------------------
+   AGGREGATION TITLE
+   ------------------------------------------------------------ */
+
+.temperature-aggregation-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #004466;
+    margin-bottom: 12px;
+}
+
+
+/* ============================================================
+   AGGREGATION OPTIONS
+   ============================================================ */
+
+.temperature-aggregation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 22px;
+}
+
+
+/* Individual radio option */
+
+.temperature-aggregation-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+
+/* Radio button */
+
+.temperature-aggregation-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+
+    margin: 0;
+
+    accent-color: #d35400;
+
+    cursor: pointer;
+}
+
+
+/* Selected option */
+
+.temperature-aggregation-option input[type="radio"]:checked + span {
+    color: #004466;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   DAILY DATE CONTROLS
+   ============================================================ */
+
+#temperature-daily-date-container {
+    display: flex;
+    gap: 18px;
+
+    margin-top: 16px;
+    padding-top: 14px;
+
+    border-top: 1px solid #e5e5e5;
+}
+
+
+/* ============================================================
+   PERIOD CONTROLS
+   ============================================================ */
+
+#temperature-aggregation-period-container {
+    display: none;
+
+    gap: 18px;
+
+    margin-top: 16px;
+    padding-top: 14px;
+
+    border-top: 1px solid #e5e5e5;
+}
+
+
+/* ------------------------------------------------------------
+   FILTER ITEM
+   ------------------------------------------------------------ */
+
+.temperature-filter-item {
+    flex: 1;
+    min-width: 220px;
+}
+
+
+/* Label */
+
+.temperature-filter-item label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    color: #004466;
+}
+
+
+/* ============================================================
+   DATE / SELECT INPUTS
+   ============================================================ */
+
+.temperature-filter-item input[type="date"],
+.temperature-filter-item select,
+#temperaturePeriod,
+#temperatureAggregationYear,
+#temperatureAggregationPeriod {
+    width: 100%;
+
+    height: 40px;
+
+    padding: 7px 11px;
+
+    border: 1px solid #d5dbe0;
+    border-radius: 7px;
+
+    background: #ffffff;
+
+    font-size: 14px;
+    color: #333;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/* Focus */
+
+.temperature-filter-item input[type="date"]:focus,
+.temperature-filter-item select:focus,
+#temperaturePeriod:focus,
+#temperatureAggregationYear:focus,
+#temperatureAggregationPeriod:focus {
+    border-color: #0074b8;
+
+    box-shadow:
+        0 0 0 3px rgba(0, 116, 184, 0.12);
+}
+
+
+/* ============================================================
+   OLD APPLY BUTTON
+   ============================================================ */
+
+.temperature-button {
+    display: none !important;
+}
+
+
+.temperature-button button {
+    display: none !important;
+}
+
+
+/* ============================================================
+   MAP AREA
+   ============================================================ */
+
+.temperature-map {
+    width: 100%;
+    height: 75vh;
+    min-height: 600px;
+
+    border-radius: 8px;
+
+    overflow: hidden;
+}
+
+
+/* Leaflet map */
+
+#temperatureMap {
+    width: 100%;
+    height: 100%;
+}
+
+
+/* ============================================================
+   TEMPERATURE LAYOUT
+   ============================================================ */
+
+.temperature-content {
+    display: grid;
+
+    grid-template-columns:
+        200px
+        minmax(600px, 1fr)
+        200px;
+
+    gap: 14px;
+
+    width: 100%;
+}
+
+
+/* ============================================================
+   LEFT SIDEBAR
+   ============================================================ */
+
+.temperature-sidebar {
+    padding: 18px;
+
+    background: #ffffff;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 14px rgba(0, 0, 0, 0.08);
+
+    overflow-y: auto;
+}
+
+
+/* Sidebar heading */
+
+.temperature-sidebar h5 {
+    margin: 0 0 16px 0;
+
+    font-size: 21px;
+
+    font-weight: 600;
+
+    color: #004466;
+}
+
+
+/* ============================================================
+   MAP LAYERS
+   ============================================================ */
+
+.temperature-sidebar .layer-item {
+    margin-bottom: 10px;
+}
+
+
+/* Temperature layer */
+
+.temperature-layer {
+    display: block;
+
+    padding: 12px;
+
+    margin-bottom: 10px;
+
+    border-radius: 9px;
+
+    background: #f1f5f9;
+
+    color: #333;
+
+    text-decoration: none;
+
+    font-size: 13px;
+
+    transition: 0.2s ease;
+}
+
+
+.temperature-layer:hover {
+    background: #e2e8f0;
+
+    color: #222;
+}
+
+
+.temperature-layer.active {
+    background: #d35400;
+
+    color: #ffffff;
+
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   SIDEBAR DESCRIPTION
+   ============================================================ */
+
+.temperature-layer-description {
+    font-size: 12px;
+
+    line-height: 1.5;
+
+    margin-top: 5px;
+}
+
+
+/* ============================================================
+   HORIZONTAL RULE
+   ============================================================ */
+
+.temperature-sidebar hr {
+    margin: 18px 0;
+
+    border: 0;
+
+    border-top: 1px solid #ddd;
+}
+
+
+/* ============================================================
+   RIGHT LEGEND
+   ============================================================ */
+
+.temperature-legend {
+    background: #ffffff;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 14px rgba(0, 0, 0, 0.08);
+
+    overflow: hidden;
+}
+
+
+/* Legend heading */
+
+.temperature-legend h5,
+.temperature-legend-header {
+    margin: 0;
+
+    padding: 13px 14px;
+
+    background: #004466;
+
+    color: #ffffff;
+
+    font-size: 15px;
+
+    font-weight: 600;
+}
+
+
+/* Legend content */
+
+.temperature-legend-content {
+    padding: 14px;
+}
+
+
+/* ============================================================
+   LEGEND TITLE
+   ============================================================ */
+
+.temperature-legend-title {
+    font-size: 13px;
+
+    font-weight: 600;
+
+    color: #004466;
+
+    margin-bottom: 12px;
+}
+
+
+/* ============================================================
+   LEGEND ITEMS
+   ============================================================ */
+
+.temperature-legend-item {
+    display: flex;
+
+    align-items: center;
+
+    margin-bottom: 9px;
+
+    font-size: 12px;
+
+    color: #333;
+}
+
+
+/* ============================================================
+   LEGEND COLOR BOX
+   ============================================================ */
+
+.temperature-legend-box {
+    flex-shrink: 0;
+
+    width: 17px;
+    height: 17px;
+
+    margin-right: 8px;
+
+    border: 1px solid #777;
+}
+
+
+/* ============================================================
+   TEMPERATURE COLOURS
+   ============================================================ */
+
+/* Cold */
+
+.temperature-1 {
+    background: #313695;
+}
+
+.temperature-2 {
+    background: #74add1;
+}
+
+
+/* Moderate */
+
+.temperature-3 {
+    background: #ffffbf;
+}
+
+
+/* Warm */
+
+.temperature-4 {
+    background: #fdae61;
+}
+
+.temperature-5 {
+    background: #d73027;
+}
+
+
+/* Very hot */
+
+.temperature-6 {
+    background: #a50026;
+}
+
+
+/* No data */
+
+.temperature-no-data {
+    background: #eeeeee;
+}
+
+
+/* ============================================================
+   TEMPERATURE POPUP
+   ============================================================ */
+
+.temperature-popup {
+    min-width: 180px;
+
+    text-align: center;
+}
+
+
+.temperature-popup h6 {
+    margin: 0 0 8px 0;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    color: #004466;
+}
+
+
+.temperature-popup div {
+    font-size: 12px;
+
+    color: #555;
+}
+
+
+.temperature-popup strong {
+    display: block;
+
+    margin-top: 7px;
+
+    font-size: 18px;
+
+    color: #d35400;
+}
+
+
+/* ============================================================
+   LEAFLET TOOLTIP
+   ============================================================ */
+
+.temperature-page .leaflet-tooltip {
+    font-size: 12px;
+
+    border-radius: 5px;
+}
+
+
+/* ============================================================
+   LEAFLET POPUP
+   ============================================================ */
+
+.temperature-page .leaflet-popup-content {
+    margin: 12px;
+}
+
+
+/* ============================================================
+   COORDINATES BOX
+   ============================================================ */
+
+#temperature-coords-box {
+    position: absolute;
+
+    left: 12px;
+    bottom: 12px;
+
+    background: #ffffff;
+
+    padding: 6px 10px;
+
+    border-radius: 8px;
+
+    font-size: 12px;
+
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+    z-index: 1000;
+}
+
+
+/* ============================================================
+   MAP WRAPPER
+   ============================================================ */
+
+#temperature-map-wrapper {
+    position: relative;
+
+    width: 100%;
+}
+
+
+/* ============================================================
+   MAP LABEL
+   ============================================================ */
+
+.temperature-map-label {
+    margin-top: 8px;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    color: #004466;
+}
+
+
+/* ============================================================
+   DATASET CARD
+   ============================================================ */
+
+.temperature-dataset-card {
+    grid-column: 1 / -1;
+
+    background: #ffffff;
+
+    margin-top: 0;
+
+    padding: 25px;
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+
+.temperature-dataset-card h4 {
+    color: #004466;
+
+    margin-bottom: 15px;
+}
+
+
+.temperature-dataset-card p {
+    line-height: 1.8;
+
+    color: #444;
+
+    margin-bottom: 0;
+}
+
+
+/* ============================================================
+   DESKTOP
+   ============================================================ */
+
+@media (min-width: 1200px) {
+
+    .temperature-filter-bar {
+        padding: 18px 20px;
+    }
+
+    .temperature-content {
+        grid-template-columns:
+            200px
+            minmax(700px, 1fr)
+            200px;
+    }
+}
+
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 1100px) {
+
+    .temperature-content {
+        grid-template-columns:
+            190px
+            minmax(500px, 1fr)
+            190px;
+
+        gap: 10px;
+    }
+
+    .temperature-sidebar {
+        padding: 15px;
+    }
+
+    .temperature-sidebar h5 {
+        font-size: 19px;
+    }
+
+    .temperature-map {
+        min-height: 550px;
+    }
+}
+
+
+/* ============================================================
+   TABLET / SMALL LAPTOP
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .temperature-content {
+        grid-template-columns:
+            180px
+            minmax(450px, 1fr);
+    }
+
+    .temperature-legend {
+        display: none;
+    }
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    /* Filter card */
+
+    .temperature-filter-bar {
+        padding: 16px;
+
+        border-radius: 12px;
+    }
+
+
+    /* Aggregation */
+
+    .temperature-aggregation {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 10px;
+    }
+
+
+    .temperature-aggregation-option {
+        width: 100%;
+
+        font-size: 14px;
+    }
+
+
+    /* Dates */
+
+    #temperature-daily-date-container,
+    #temperature-aggregation-period-container {
+
+        flex-direction: column;
+
+        gap: 12px;
+
+        margin-top: 14px;
+
+        padding-top: 12px;
+    }
+
+
+    .temperature-filter-item {
+        width: 100%;
+
+        min-width: 0;
+    }
+
+
+    /* Main layout */
+
+    .temperature-content {
+        display: flex;
+
+        flex-direction: column;
+
+        width: 100%;
+    }
+
+
+    /* Sidebar */
+
+    .temperature-sidebar {
+        width: 100%;
+
+        max-height: none;
+
+        padding: 15px;
+    }
+
+
+    /* Map */
+
+    .temperature-map {
+        width: 100%;
+
+        height: 65vh;
+
+        min-height: 450px;
+
+        border-radius: 8px;
+    }
+
+
+    /* Legend */
+
+    .temperature-legend {
+        display: block;
+
+        width: 100%;
+    }
+
+
+    /* Dataset */
+
+    .temperature-dataset-card {
+        width: 100%;
+    }
+}
+
+
+/* ============================================================
+   SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 480px) {
+
+    .temperature-filter-bar {
+        padding: 14px;
+    }
+
+
+    .temperature-aggregation-title {
+        font-size: 13px;
+    }
+
+
+    .temperature-aggregation-option {
+        font-size: 13px;
+    }
+
+
+    .temperature-filter-item label {
+        font-size: 12px;
+    }
+
+
+    .temperature-filter-item input[type="date"],
+    .temperature-filter-item select {
+        height: 38px;
+
+        font-size: 13px;
+    }
+
+
+    .temperature-map {
+        height: 60vh;
+
+        min-height: 400px;
+    }
+
+
+    .temperature-sidebar h5 {
+        font-size: 18px;
+    }
+}

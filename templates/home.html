@@ -380,7 +380,11 @@ Interactive Spatial Explorer
 
     <div class="sidebar">
         <h3>Map Layers</h3>
-
+        <div class="layer" role="button" tabindex="0" onclick="window.location='/temperature/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/temperature/';}">
+            
+            🌡️ Temperature
+    
+            </div>
         <div class="layer" role="button" tabindex="0" onclick="window.location='/rainfall/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/rainfall/';}">
             
         🌧 Rainfall
@@ -533,9 +537,34 @@ Research Domains
 
 </h2>
 
-
-
 <div class="cards">
+
+
+
+    <a href="/temperature/"
+    class="card"
+    style="text-decoration:none;color:inherit">
+    
+    
+    <h3>
+    🌡️ Temperature
+    </h3>
+    
+    
+    <p>
+    
+    Extreme temperature variations
+    
+    
+    </p>
+    <b>
+        <!-- Open Tool → -->
+        </b>
+        
+        
+        </a>
+
+
 
 
 
@@ -552,7 +581,7 @@ style="text-decoration:none;color:inherit">
 <p>
 
 Extreme rainfall analysis
-and downloadable data.
+
 
 </p>
 
@@ -676,7 +705,7 @@ A real-time GIS-based comprehensive market decision support system for all agric
 
 
 
-<div class="card dataset" role="button" tabindex="0" onclick="window.open('https://mahamaps.com/iot', '_blank')" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
+<div class="card dataset" role="button" tabindex="0" onclick="window.open('https://watershed.mahamaps.com/custom-dashboard/iot-dashboard/', '_blank')" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation/';}">
 
 <h3>
 IWRM Living Lab Portal

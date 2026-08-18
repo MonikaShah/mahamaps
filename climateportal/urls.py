@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import home,rainfall,rainfall_districts,gwpz_view,ff_view,about_team, districts_api,talukas_api,villages_api,village_boundary_api,landslide_view
+from .views import home,rainfall,rainfall_districts,gwpz_view,ff_view,about_team, districts_api,talukas_api, temperature_districts,villages_api,village_boundary_api,landslide_view,temperature
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -25,6 +25,9 @@ urlpatterns = [
     # Root URL must show landing page (home). Do not redirect / to /precipitation/ in server config.
     path('', home, name='landing'),
     path('precipitation/', include('precipitation.urls')),
+    path("temperature/", temperature, name="temperature"),
+    path("api/temperature-districts/",temperature_districts,name="temperature_districts"
+    ),
     path('rainfall/', rainfall,name='rainfall'),
     path('gwpz/', gwpz_view, name='gwpz'),  # Temporary, replace with gwpz_view when ready
     path('ff/', ff_view, name='ff'),  # Temporary, replace with gwpz_view when ready

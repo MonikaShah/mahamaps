@@ -4,6 +4,8 @@ from django.conf import settings
 from .models import SiteSection 
 import json
 import os
+from datetime import date, timedelta
+import calendar
 from django.http import JsonResponse
 from django.conf import settings
 from .models import MahaVillage
@@ -18,20 +20,459 @@ def ff_view(request):
     return render(request, "forestfire.html")
 def landslide_view(request):
     return render(request, "landslide.html")
+def temperature(request):
+    return render(request, "temperature.html")
+
+def temperature_districts(request):
+
+    # ============================================================
+    # PARAMETERS
+    # ============================================================
+
+    aggregation = request.GET.get(
+        "aggregation",
+        "daily"
+    )
+
+    start_date = request.GET.get(
+        "start_date"
+    )
+
+    end_date = request.GET.get(
+        "end_date"
+    )
+
+    year = request.GET.get(
+        "year"
+    )
+
+    period = request.GET.get(
+        "period"
+    )
+
+
+    # ============================================================
+    # VALID AGGREGATIONS
+    # ============================================================
+
+    valid_aggregations = [
+        "daily",
+        "weekly",
+        "monthly",
+        "seasonal",
+        "annual"
+    ]
+
+    if aggregation not in valid_aggregations:
+
+        return JsonResponse(
+            {
+                "error": "Invalid aggregation"
+            },
+            status=400
+        )
+
+
+    # ============================================================
+    # DAILY
+    # ============================================================
+
+    if aggregation == "daily":
+
+        if not start_date or not end_date:
+
+            return JsonResponse(
+                {
+                    "error":
+                    "start_date and end_date are required for daily aggregation"
+                },
+                status=400
+            )
+
+
+    # ============================================================
+    # OTHER AGGREGATIONS
+    # ============================================================
+
+    else:
+
+        if not year:
+
+            return JsonResponse(
+                {
+                    "error":
+                    "year is required for this aggregation"
+                },
+                status=400
+            )
+
+
+        if not period:
+
+            return JsonResponse(
+                {
+                    "error":
+                    "period is required for this aggregation"
+                },
+                status=400
+            )
+
+
+        # --------------------------------------------------------
+        # Convert year
+        # --------------------------------------------------------
+
+        try:
+
+            year = int(year)
+
+        except ValueError:
+
+            return JsonResponse(
+                {
+                    "error": "Invalid year"
+                },
+                status=400
+            )
+
+
+        # ========================================================
+        # WEEKLY
+        # ========================================================
+
+        if aggregation == "weekly":
+
+            try:
+
+                week = int(period)
+
+            except ValueError:
+
+                return JsonResponse(
+                    {
+                        "error":
+                        "Weekly period must be a number from 1 to 52"
+                    },
+                    status=400
+                )
+
+
+            if week < 1 or week > 52:
+
+                return JsonResponse(
+                    {
+                        "error":
+                        "Weekly period must be between 1 and 52"
+                    },
+                    status=400
+                )
+
+
+            start = (
+                date(year, 1, 1)
+                + timedelta(days=(week - 1) * 7)
+            )
+
+
+            end = start + timedelta(days=6)
+
+
+            last_day_of_year = date(
+                year,
+                12,
+                31
+            )
+
+
+            if end > last_day_of_year:
+
+                end = last_day_of_year
+
+
+            start_date = start.isoformat()
+            end_date = end.isoformat()
+
+
+        # ========================================================
+        # MONTHLY
+        # ========================================================
+
+        elif aggregation == "monthly":
+
+            try:
+
+                month = int(period)
+
+            except ValueError:
+
+                return JsonResponse(
+                    {
+                        "error":
+                        "Monthly period must be a number from 1 to 12"
+                    },
+                    status=400
+                )
+
+
+            if month < 1 or month > 12:
+
+                return JsonResponse(
+                    {
+                        "error":
+                        "Monthly period must be between 1 and 12"
+                    },
+                    status=400
+                )
+
+
+            start = date(
+                year,
+                month,
+                1
+            )
+
+
+            last_day = calendar.monthrange(
+                year,
+                month
+            )[1]
+
+
+            end = date(
+                year,
+                month,
+                last_day
+            )
+
+
+            start_date = start.isoformat()
+            end_date = end.isoformat()
+
+
+        # ========================================================
+        # SEASONAL
+        # ========================================================
+
+        elif aggregation == "seasonal":
+
+            period_lower = str(
+                period
+            ).strip().lower()
+
+
+            if period_lower == "winter":
+
+                start = date(
+                    year,
+                    1,
+                    1
+                )
+
+                end = date(
+                    year,
+                    2,
+                    calendar.monthrange(
+                        year,
+                        2
+                    )[1]
+                )
+
+
+            elif period_lower == "pre-monsoon":
+
+                start = date(
+                    year,
+                    3,
+                    1
+                )
+
+                end = date(
+                    year,
+                    5,
+                    31
+                )
+
+
+            elif period_lower == "monsoon":
+
+                start = date(
+                    year,
+                    6,
+                    1
+                )
+
+                end = date(
+                    year,
+                    9,
+                    30
+                )
+
+
+            elif period_lower == "post-monsoon":
+
+                start = date(
+                    year,
+                    10,
+                    1
+                )
+
+                end = date(
+                    year,
+                    12,
+                    31
+                )
+
+
+            else:
+
+                return JsonResponse(
+                    {
+                        "error":
+                        "Invalid seasonal period"
+                    },
+                    status=400
+                )
+
+
+            start_date = start.isoformat()
+            end_date = end.isoformat()
+
+
+        # ========================================================
+        # ANNUAL
+        # ========================================================
+
+        elif aggregation == "annual":
+
+            start = date(
+                year,
+                1,
+                1
+            )
+
+            end = date(
+                year,
+                12,
+                31
+            )
+
+
+            start_date = start.isoformat()
+            end_date = end.isoformat()
+
+
+    # ============================================================
+    # DEBUG
+    # ============================================================
+
+    print(
+        "Temperature request:",
+        aggregation,
+        year,
+        period,
+        start_date,
+        end_date
+    )
+
+
+    # ============================================================
+    # TEMPERATURE AGGREGATION
+    # ============================================================
+
+    # Daily = average Tmax over selected dates
+    # Everything else = average Tmax over the period
+
+    aggregation_sql = "AVG(tmax)"
+
+
+    # ============================================================
+    # QUERY
+    # ============================================================
+
+    query = f"""
+        SELECT
+            temp_district,
+            {aggregation_sql} AS temperature_value
+        FROM maharashtra_daily_temperature
+        WHERE temperature_date >= %s
+          AND temperature_date <= %s
+        GROUP BY temp_district
+        ORDER BY temp_district;
+    """
+
+
+    params = [
+        start_date,
+        end_date
+    ]
+
+
+    # ============================================================
+    # EXECUTE
+    # ============================================================
+
+    with connection.cursor() as cursor:
+
+        cursor.execute(
+            query,
+            params
+        )
+
+        rows = cursor.fetchall()
+
+
+    # ============================================================
+    # RESPONSE
+    # ============================================================
+
+    data = []
+
+
+    for district, value in rows:
+
+        data.append(
+            {
+                "district": district,
+
+                "value":
+                    round(
+                        float(value),
+                        2
+                    )
+                    if value is not None
+                    else None
+            }
+        )
+
+
+    # ============================================================
+    # JSON
+    # ============================================================
+
+    return JsonResponse(
+        {
+            "start_date":
+                start_date,
+
+            "end_date":
+                end_date,
+
+            "aggregation":
+                aggregation,
+
+            "year":
+                year,
+
+            "period":
+                period,
+
+            "data":
+                data
+        }
+    )
 
 def rainfall(request):
     return render(request, "rainfall.html")
-
-from django.http import JsonResponse
-from django.db import connection
-from datetime import datetime, timedelta
-
-from datetime import date, timedelta
-import calendar
-
-from django.http import JsonResponse
-from django.db import connection
-
 
 def rainfall_districts(request):
 

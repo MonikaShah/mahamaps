@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.conf import settings
 from .models import MahaVillage
 from django.db import connection
+from django.views.decorators.http import require_GET
 
 def home(request):
     return render(request, 'home.html', {"iot_dashboard_url": settings.IOT_DASHBOARD_URL})
@@ -1162,36 +1163,284 @@ def village_boundary_api(request):
     village = request.GET.get("village")
 
     sql = """
-    SELECT json_build_object(
-        'type','FeatureCollection',
-        'features',
-        COALESCE(
-            json_agg(
-                json_build_object(
-                    'type','Feature',
-                    'geometry', ST_AsGeoJSON(geom)::json,
-                    'properties',
-                    json_build_object(
-                        'district', district,
-                        'tehsil', tehsil,
-                        'village', village
-                    )
+        SELECT
+            json_build_object(
+                'type', 'FeatureCollection',
+
+                'village_id',
+                (
+                    SELECT id
+                    FROM mahavillages_clean
+                    WHERE district = %s
+                      AND tehsil = %s
+                      AND village = %s
+                    ORDER BY id
+                    LIMIT 1
+                ),
+
+                'features',
+                COALESCE(
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'type', 'Feature',
+                                'geometry', ST_AsGeoJSON(geom)::json,
+                                'properties', json_build_object(
+                                    'id', id,
+                                    'district', district,
+                                    'tehsil', tehsil,
+                                    'village', village
+                                )
+                            )
+                        )
+                        FROM mahavillages_clean
+                        WHERE district = %s
+                          AND tehsil = %s
+                          AND village = %s
+                    ),
+                    '[]'::json
                 )
-            ),
-            '[]'::json
-        )
-    )
-    FROM mahavillages_clean
-    WHERE district=%s
-      AND tehsil=%s
-      AND village=%s
+            )
     """
 
+    params = [
+        district,
+        tehsil,
+        village,
+
+        district,
+        tehsil,
+        village
+    ]
+
     with connection.cursor() as cursor:
+
         cursor.execute(
             sql,
-            [district, tehsil, village]
+            params
         )
+
         geojson = cursor.fetchone()[0]
 
     return JsonResponse(geojson)
+
+def precipitation_gridded(request):
+    return render(
+        request,
+        "precipitation_gridded.html"
+    )
+
+def precipitation_gridded_nc(request):
+    return render(
+        request,
+        "precipitation_gridded_nc.html"
+    )
+
+# ============================================================
+# DISTRICT BOUNDARY
+# ============================================================
+
+@require_GET
+def district_boundary(request):
+
+    district = request.GET.get("district", "").strip()
+
+    if not district:
+        return JsonResponse(
+            {
+                "error": "District is required."
+            },
+            status=400
+        )
+
+    sql = """
+        SELECT
+            ST_AsGeoJSON(
+                ST_Union(geom)
+            ) AS geometry
+        FROM mahavillages_clean
+        WHERE district = %s;
+    """
+
+    with connection.cursor() as cursor:
+
+        cursor.execute(
+            sql,
+            [district]
+        )
+
+        row = cursor.fetchone()
+
+    if not row or not row[0]:
+
+        return JsonResponse(
+            {
+                "error": "District boundary not found."
+            },
+            status=404
+        )
+
+    geometry = json.loads(row[0])
+
+    return JsonResponse(
+        {
+            "type": "Feature",
+            "properties": {
+                "district": district
+            },
+            "geometry": geometry
+        }
+    )
+
+
+# ============================================================
+# TALUKA / TEHSIL BOUNDARY
+# ============================================================
+
+@require_GET
+def taluka_boundary(request):
+
+    district = request.GET.get(
+        "district",
+        ""
+    ).strip()
+
+    tehsil = request.GET.get(
+        "tehsil",
+        ""
+    ).strip()
+
+    if not district or not tehsil:
+
+        return JsonResponse(
+            {
+                "error":
+                    "District and tehsil are required."
+            },
+            status=400
+        )
+
+    sql = """
+        SELECT
+            ST_AsGeoJSON(
+                ST_Union(geom)
+            ) AS geometry
+        FROM mahavillages_clean
+        WHERE district = %s
+          AND tehsil = %s;
+    """
+
+    with connection.cursor() as cursor:
+
+        cursor.execute(
+            sql,
+            [
+                district,
+                tehsil
+            ]
+        )
+
+        row = cursor.fetchone()
+
+    if not row or not row[0]:
+
+        return JsonResponse(
+            {
+                "error":
+                    "Taluka boundary not found."
+            },
+            status=404
+        )
+
+    geometry = json.loads(row[0])
+
+    return JsonResponse(
+        {
+            "type": "Feature",
+            "properties": {
+                "district": district,
+                "tehsil": tehsil
+            },
+            "geometry": geometry
+        }
+    )
+
+
+# ============================================================
+# FIND VILLAGE AT MAP CLICK
+# ============================================================
+
+@require_GET
+def village_at_point(request):
+
+    try:
+
+        longitude = float(
+            request.GET.get("lon")
+        )
+
+        latitude = float(
+            request.GET.get("lat")
+        )
+
+    except (TypeError, ValueError):
+
+        return JsonResponse(
+            {
+                "error":
+                    "Valid lon and lat are required."
+            },
+            status=400
+        )
+
+    sql = """
+        SELECT
+            district,
+            tehsil,
+            village
+        FROM mahavillages_clean
+        WHERE ST_Covers(
+            geom,
+            ST_SetSRID(
+                ST_Point(%s, %s),
+                4326
+            )
+        )
+        LIMIT 1;
+    """
+
+    with connection.cursor() as cursor:
+
+        cursor.execute(
+            sql,
+            [
+                longitude,
+                latitude
+            ]
+        )
+
+        row = cursor.fetchone()
+
+    if not row:
+
+        return JsonResponse(
+            {
+                "found": False,
+                "message":
+                    "No village found at this location."
+            }
+        )
+
+    district, tehsil, village = row
+
+    return JsonResponse(
+        {
+            "found": True,
+
+            "district": district,
+
+            "tehsil": tehsil,
+
+            "village": village
+        }
+    )

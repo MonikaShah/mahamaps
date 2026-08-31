@@ -16,7 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import home,rainfall,rainfall_districts,gwpz_view,ff_view,about_team, districts_api,talukas_api, temperature_districts,villages_api,village_boundary_api,landslide_view,temperature
+from precipitation_gridded import views
+# from precipitation_gridded.views import imd_rainfall_api
+from .views import home, precipitation_gridded_nc,precipitation_gridded,rainfall,rainfall_districts,gwpz_view,ff_view,about_team, districts_api,talukas_api, temperature_districts,villages_api,village_boundary_api,landslide_view,temperature,district_boundary,taluka_boundary,village_at_point
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -24,11 +26,19 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # Root URL must show landing page (home). Do not redirect / to /precipitation/ in server config.
     path('', home, name='landing'),
-    path('precipitation/', include('precipitation.urls')),
+    # Precipitaiton from Aakash code-------------------
+    # path('precipitation/', include('precipitation.urls')),
+    # ----------------------------
+    # path("precipitation-gridded/",precipitation_gridded,name="precipitation_gridded"),
+    path("village-rainfall-timeseries/", views.village_rainfall_timeseries, name="village_rainfall_timeseries"),
+    path("precipitation-gridded-nc/",precipitation_gridded_nc,name="precipitation_gridded_nc"),
+    path("api/imd/rainfall/",views.imd_rainfall_api,name="imd_rainfall_api"),
     path("temperature/", temperature, name="temperature"),
     path("api/temperature-districts/",temperature_districts,name="temperature_districts"
     ),
-    path('rainfall/', rainfall,name='rainfall'),
+    # -------------------------District wise rainfall-------------------------------
+    # path('rainfall/', rainfall,name='rainfall'),
+    # -------------------------District wise rainfall-------------------------------
     path('gwpz/', gwpz_view, name='gwpz'),  # Temporary, replace with gwpz_view when ready
     path('ff/', ff_view, name='ff'),  # Temporary, replace with gwpz_view when ready
     path('landslide/', landslide_view, name='landslide'),  # Temporary, replace with landslide_view when ready
@@ -57,6 +67,32 @@ urlpatterns = [
         "api/rainfall-districts/",
         rainfall_districts,
         name="rainfall_districts"
+    ),
+
+    # --------------------------------------------------------
+    # Administrative boundaries
+    # --------------------------------------------------------
+
+    path(
+        "api/district-boundary/",
+        district_boundary,
+        name="district_boundary"
+    ),
+
+    path(
+        "api/taluka-boundary/",
+        taluka_boundary,
+        name="taluka_boundary"
+    ),
+
+    # --------------------------------------------------------
+    # Map click → village
+    # --------------------------------------------------------
+
+    path(
+        "api/village-at-point/",
+        village_at_point,
+        name="village_at_point"
     ),
 
 ]

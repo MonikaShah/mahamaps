@@ -1,0 +1,1116 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Rainfall Monitoring{% endblock %}
+
+{# Hide the top navigation bar #}
+{% block navbar %}
+{% endblock %}
+
+{# ---------- HERO ---------- #}
+
+{% block hero_title %}
+Rainfall Monitoring
+{% endblock %}
+
+{% block hero_text %}
+
+Historical Daily Rainfall Analysis across Maharashtra
+<br><br>
+
+{% endblock %}
+
+
+{% block extra_css %}
+
+{{ block.super }}
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+
+/* ============================================================
+   MAIN WRAPPER
+   ============================================================ */
+
+.wrapper{
+
+    width:95%;
+
+    max-width:1600px;
+
+    margin:auto;
+
+    padding:20px;
+
+}
+
+
+/* ============================================================
+   MAP LAYOUT
+   ============================================================ */
+
+.map-layout{
+
+    display:grid;
+
+    grid-template-columns:260px minmax(700px,1fr) 260px;
+
+    gap:20px;
+
+    align-items:start;
+
+}
+
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+
+.sidebar{
+
+    background:#fff;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+    padding:25px;
+
+    height:650px;
+
+    display:flex;
+
+    flex-direction:column;
+
+}
+
+.sidebar,
+.legend-panel{
+
+    height:70vh;
+
+    min-height:500px;
+
+    max-height:750px;
+
+}
+
+.sidebar h3{
+
+    color:#004466;
+
+    margin-bottom:20px;
+
+}
+
+
+/* ============================================================
+   LAYER LINKS
+   ============================================================ */
+
+.layer{
+
+    display:block;
+
+    padding:14px;
+
+    margin-bottom:10px;
+
+    border-radius:12px;
+
+    background:#f1f5f9;
+
+    color:#222;
+
+    text-decoration:none;
+
+    transition:.25s;
+
+}
+
+.layer:hover{
+
+    background:#dbeafe;
+
+}
+
+.layer.active{
+
+    background:#0077b6;
+
+    color:white;
+
+    font-weight:bold;
+
+}
+
+.layer-options{
+
+    margin:15px 0 20px 15px;
+
+}
+
+.layer-options label{
+
+    display:block;
+
+    margin-bottom:10px;
+
+    cursor:pointer;
+
+}
+
+
+/* ============================================================
+   MAP
+   ============================================================ */
+
+#map-wrapper{
+
+    width:100%;
+
+}
+
+#map{
+
+    width:100%;
+
+    height:70vh;
+
+    min-height:450px;
+
+    max-height:750px;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.12);
+
+}
+
+
+/* ============================================================
+   FILTER BAR
+   ============================================================ */
+
+.filter-bar{
+
+    display:flex;
+
+    gap:18px;
+
+    align-items:end;
+
+    background:white;
+
+    padding:18px 20px;
+
+    border-radius:16px;
+
+    box-shadow:0 4px 15px rgba(0,0,0,.08);
+
+    margin-bottom:20px;
+
+    flex-wrap:wrap;
+
+}
+
+.filter-item{
+
+    flex:1;
+
+    min-width:180px;
+
+}
+
+.filter-item label{
+
+    display:block;
+
+    margin-bottom:6px;
+
+    font-weight:600;
+
+    color:#004466;
+
+}
+
+
+/* ============================================================
+   LEGEND
+   ============================================================ */
+
+.legend-panel{
+
+    background:#fff;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+    height:70vh;
+
+    min-height:500px;
+
+    max-height:750px;
+
+    overflow-y:auto;
+
+}
+
+.legend-header{
+
+    background:#004466;
+
+    color:#fff;
+
+    padding:12px 16px;
+
+    font-size:18px;
+
+    font-weight:600;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+}
+
+#legendToggle{
+
+    background:none;
+
+    border:none;
+
+    color:white;
+
+    font-size:22px;
+
+    cursor:pointer;
+
+}
+
+#legendContent{
+
+    padding:15px;
+
+}
+
+.legend-section{
+
+    margin-bottom:22px;
+
+}
+
+.legend-section:last-child{
+
+    margin-bottom:0;
+
+}
+
+.legend-section h6{
+
+    font-size:15px;
+
+    font-weight:600;
+
+    color:#004466;
+
+    margin-bottom:10px;
+
+}
+
+.legend-item{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:7px;
+
+    font-size:13px;
+
+    color:#333;
+
+}
+
+.lg{
+
+    width:16px;
+
+    height:16px;
+
+    border:1px solid #666;
+
+    flex-shrink:0;
+
+}
+
+
+/* ============================================================
+   DATASET CARD
+   ============================================================ */
+
+.dataset-card{
+
+    grid-column:1 / -1;
+
+    background:white;
+
+    padding:25px;
+
+    margin-top:20px;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+}
+
+.dataset-card h4{
+
+    color:#004466;
+
+    margin-bottom:15px;
+
+}
+
+.dataset-card p{
+
+    line-height:1.8;
+
+    color:#444;
+
+}
+
+
+/* ============================================================
+   TIME SERIES CARD
+   ============================================================ */
+
+.timeseries-card{
+
+    grid-column:1 / -1;
+
+    background:white;
+
+    padding:25px;
+
+    margin-top:20px;
+
+    border-radius:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+}
+
+.timeseries-card h4{
+
+    color:#004466;
+
+    margin-bottom:15px;
+
+}
+
+#rainfallChart{
+
+    width:100%;
+
+    height:350px;
+
+}
+
+
+/* ============================================================
+   LOCATION INFO
+   ============================================================ */
+
+.location-info{
+
+    background:#f8fafc;
+
+    border-radius:12px;
+
+    padding:15px;
+
+    margin-top:15px;
+
+    font-size:14px;
+
+}
+
+.location-info strong{
+
+    color:#004466;
+
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media(max-width:1200px){
+
+    .map-layout{
+
+        grid-template-columns:240px 1fr;
+
+    }
+
+    .legend-panel{
+
+        grid-column:1 / -1;
+
+        width:100%;
+
+        position:static;
+
+        margin-top:20px;
+
+    }
+
+}
+
+
+@media(max-width:1100px){
+
+    .map-layout{
+
+        grid-template-columns:1fr;
+
+    }
+
+    .legend-panel{
+
+        position:relative;
+
+        top:0;
+
+    }
+
+    .dataset-card{
+
+        grid-column:auto;
+
+    }
+
+    #map{
+
+        width:100%;
+
+        height:70vh;
+
+        min-height:500px;
+
+        max-height:750px;
+
+        border-radius:18px;
+
+    }
+
+}
+
+
+@media(max-width:768px){
+
+    .map-layout{
+
+        display:flex;
+
+        flex-direction:column;
+
+        gap:15px;
+
+    }
+
+    .sidebar,
+    .legend-panel{
+
+        height:auto;
+
+        max-height:none;
+
+    }
+
+    #map{
+
+        height:420px;
+
+        min-height:420px;
+
+    }
+
+    .wrapper{
+
+        width:100%;
+
+        padding:12px;
+
+    }
+
+    .filter-bar{
+
+        flex-direction:column;
+
+        align-items:stretch;
+
+        gap:12px;
+
+    }
+
+    .filter-item{
+
+        width:100%;
+
+        min-width:100%;
+
+    }
+
+    .sidebar{
+
+        order:1;
+
+    }
+
+    #map-wrapper{
+
+        order:2;
+
+    }
+
+    .legend-panel{
+
+        order:3;
+
+        width:100%;
+
+        position:static;
+
+        max-height:none;
+
+    }
+
+    .timeseries-card{
+
+        order:4;
+
+    }
+
+    .dataset-card{
+
+        order:5;
+
+    }
+
+}
+
+</style>
+
+{% endblock %}
+
+
+
+{% block content %}
+
+<h3>
+    <center>
+        IMD Daily Rainfall Monitoring
+    </center>
+</h3>
+
+
+<div class="wrapper">
+
+
+    <!-- ======================================================
+         LOCATION + DATE FILTER
+         ====================================================== -->
+
+    <div class="filter-bar">
+
+
+        <div class="filter-item">
+
+            <label>State</label>
+
+            <select id="stateSelect" class="form-select">
+
+                <option>Maharashtra</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="filter-item">
+
+            <label>District</label>
+
+            <select id="districtSelect" class="form-select">
+
+                <option>Select District</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="filter-item">
+
+            <label>Taluka</label>
+
+            <select id="talukaSelect" class="form-select">
+
+                <option>Select Taluka</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="filter-item">
+
+            <label>Village</label>
+
+            <select id="villageSelect" class="form-select">
+
+                <option>Select Village</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="filter-item">
+
+            <label>Start Date</label>
+        
+            <input
+                type="date"
+                id="startDate"
+                class="form-control"
+                value="2023-01-01"
+            >
+        
+        </div>
+        
+        
+        <div class="filter-item">
+        
+            <label>End Date</label>
+        
+            <input
+                type="date"
+                id="endDate"
+                class="form-control"
+                value="2023-12-31"
+            >
+        
+        </div>
+
+    </div>
+
+
+
+    <!-- ======================================================
+         MAP LAYOUT
+         ====================================================== -->
+
+    <div class="map-layout">
+
+
+        <!-- ==================================================
+             SIDEBAR
+             ================================================== -->
+
+        <div class="sidebar">
+
+
+            <h3>Map Layers</h3>
+
+
+            <a href="/temperature/" class="layer">
+
+                🌡️ Temperature
+
+            </a>
+
+
+            <div class="layer active">
+
+                🌧️ Rainfall
+
+                <div class="layer-options">
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            id="rainfallCheck"
+                            checked
+                        >
+
+                        Rainfall Grid
+
+                    </label>
+
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            id="gridCheck"
+                            checked
+                        >
+
+                        Grid
+
+                    </label>
+
+                </div>
+
+            </div>
+
+
+            <a href="/ff/" class="layer">
+
+                🔥 Forest Fire
+
+            </a>
+
+
+            <a href="/gwpz/" class="layer">
+
+                💧 Ground Water Priority Zone
+
+            </a>
+
+
+            <a href="/landslide/" class="layer">
+
+                ⛰ Landslide
+
+            </a>
+
+
+            <hr>
+
+
+            <a href="/about-team/" class="layer">
+
+                👥 Meet Our Team
+
+            </a>
+
+
+        </div>
+
+
+
+        <!-- ==================================================
+             MAP
+             ================================================== -->
+
+        <div id="map-wrapper">
+
+            <div id="map"></div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             LEGEND
+             ================================================== -->
+
+        <div id="legendContainer" class="legend-panel">
+
+
+            <div class="legend-header">
+
+                <span>
+                    <b>Legend</b>
+                </span>
+
+                <button id="legendToggle">
+                    −
+                </button>
+
+            </div>
+
+
+            <div id="legendContent">
+
+
+                <div
+                    id="rainfallLegend"
+                    class="legend-section"
+                >
+
+                    <h6>
+                        🌧️ Daily Rainfall (mm)
+                    </h6>
+
+
+                    <div class="legend-item">
+
+                        <span
+                            class="lg"
+                            style="background:#f7fbff">
+                        </span>
+
+                        No Rain / 0
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        <span
+                            class="lg"
+                            style="background:#deebf7">
+                        </span>
+
+                        0 – 2.5 mm
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        <span
+                            class="lg"
+                            style="background:#c6dbef">
+                        </span>
+
+                        2.5 – 15 mm
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        <span
+                            class="lg"
+                            style="background:#9ecae1">
+                        </span>
+
+                        15 – 30 mm
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        <span
+                            class="lg"
+                            style="background:#6baed6">
+                        </span>
+
+                        30 – 50 mm
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        <span
+                            class="lg"
+                            style="background:#3182bd">
+                        </span>
+
+                        50 – 100 mm
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        <span
+                            class="lg"
+                            style="background:#08519c">
+                        </span>
+
+                        100 – 200 mm
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        <span
+                            class="lg"
+                            style="background:#08306b">
+                        </span>
+
+                        &gt; 200 mm
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="gridLegend"
+                    class="legend-section"
+                >
+
+                    <h6>
+                        Grid Information
+                    </h6>
+
+
+                    <div class="legend-item">
+
+                        Grid Resolution:
+
+                        <strong>
+                            0.25° × 0.25°
+                        </strong>
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        Grid Cells:
+
+                        <strong>
+                            1,110
+                        </strong>
+
+                    </div>
+
+
+                    <div class="legend-item">
+
+                        Dataset:
+
+                        <strong>
+                            IMD
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="locationInfo"
+                    class="location-info"
+                >
+
+                    <strong>
+                        Selected Grid
+                    </strong>
+
+                    <br>
+
+                    <span id="selectedGridInfo">
+
+                        Select a village to identify
+                        the nearest rainfall grid.
+
+                    </span>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             TIME SERIES
+             ================================================== -->
+
+        <div class="timeseries-card">
+
+            <h4>
+                🌧️ Rainfall Time Series
+            </h4>
+
+
+            <p id="timeseriesMessage">
+
+                Select a village to view its rainfall
+                time series.
+
+            </p>
+
+
+            <div id="rainfallChart"></div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             DATASET INFORMATION
+             ================================================== -->
+
+        <div class="dataset-card">
+
+            <h4>
+                IMD Rainfall Dataset
+            </h4>
+
+
+            <p>
+
+                This rainfall dataset contains daily gridded
+                rainfall data from the India Meteorological
+                Department (IMD).
+
+                The dataset covers the period from
+                <strong>1951 onward</strong> and is provided
+                on a <strong>0.25° × 0.25°</strong> latitude-
+                longitude grid.
+
+                Each grid cell contains daily rainfall in
+                <strong>mm/day</strong>.
+
+                <br><br>
+
+                The current NetCDF dataset contains
+                <strong>30 × 37 = 1,110 grid cells</strong>
+                and <strong>27,394 daily observations</strong>.
+
+                The data are stored in PostgreSQL/PostGIS
+                using an array-based time-series structure,
+                allowing efficient extraction of daily
+                rainfall for grid cells and villages.
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="{% static 'js/location_filter.js' %}"></script>
+
+<script src="{% static 'js/rainfall_nc.js' %}"></script>
+
+
+{% endblock %}

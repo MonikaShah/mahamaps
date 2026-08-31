@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'precipitation',
     'ckeditor',
     'climateportal',
-   
+    "precipitation_gridded",
 ]
 
 MIDDLEWARE = [

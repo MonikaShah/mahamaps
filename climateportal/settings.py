@@ -25,7 +25,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-t#wd8!%(e_0@wn_-(x#(y!lz9@z42klt**k467)ph#$jo0cnvl'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+
+DEBUG = config('DJANGO_DEBUG')
 
 if DEBUG:
     IOT_DASHBOARD_URL = "http://127.0.0.1:8000/custom-dashboard/iot-dashboard"

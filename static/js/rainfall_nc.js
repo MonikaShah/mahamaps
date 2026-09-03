@@ -64,6 +64,11 @@ let selectedGrid = null;
 
 let rainfallData = [];
 
+let MIN_RAINFALL_DATE = null;
+let MAX_RAINFALL_DATE = null;
+
+const RAINFALL_DATE_RANGE_API =
+    "/rainfall-date-range/";
 
 // ============================================================
 // API
@@ -98,7 +103,86 @@ const rainfallCheckElement =
 const gridCheckElement =
     document.getElementById("gridCheck");
 
-
+    // ============================================================
+    // LOAD AVAILABLE RAINFALL DATE RANGE FROM DATABASE
+    // ============================================================
+    
+    async function loadRainfallDateRange() {
+    
+        try {
+    
+            const response =
+                await fetch(
+                    RAINFALL_DATE_RANGE_API,
+                    {
+                        method: "GET",
+                        cache: "no-store"
+                    }
+                );
+    
+            if (!response.ok) {
+    
+                throw new Error(
+                    `HTTP ${response.status}`
+                );
+            }
+    
+            const range =
+                await response.json();
+    
+            if (
+                !range.min_date ||
+                !range.max_date
+            ) {
+    
+                throw new Error(
+                    "Invalid rainfall date range returned by API."
+                );
+            }
+    
+            MIN_RAINFALL_DATE =
+                range.min_date;
+    
+            MAX_RAINFALL_DATE =
+                range.max_date;
+    
+    
+            console.log(
+                "Rainfall DB date range:",
+                MIN_RAINFALL_DATE,
+                "to",
+                MAX_RAINFALL_DATE
+            );
+    
+    
+            if (startDateElement) {
+    
+                startDateElement.min =
+                    MIN_RAINFALL_DATE;
+    
+                startDateElement.max =
+                    MAX_RAINFALL_DATE;
+            }
+    
+    
+            if (endDateElement) {
+    
+                endDateElement.min =
+                    MIN_RAINFALL_DATE;
+    
+                endDateElement.max =
+                    MAX_RAINFALL_DATE;
+            }
+    
+        }
+        catch (error) {
+    
+            console.error(
+                "Could not load rainfall date range:",
+                error
+            );
+        }
+    }
 // ============================================================
 // VALIDATE MAP CONTAINER
 // ============================================================
@@ -203,6 +287,31 @@ function initializeRainfallMap() {
 // SAFE DATE READ
 // ============================================================
 
+// function getSelectedDateRange() {
+
+//     const start =
+//         startDateElement
+//             ? startDateElement.value
+//             : null;
+
+//     const end =
+//         endDateElement
+//             ? endDateElement.value
+//             : null;
+
+
+//     if (!start || !end) {
+
+//         return null;
+//     }
+
+
+//     return {
+//         start: start,
+//         end: end
+//     };
+// }
+// For now, we will validate the date range against the database min/max dates. This prevents unnecessary API calls that will return no data.
 function getSelectedDateRange() {
 
     const start =
@@ -222,13 +331,53 @@ function getSelectedDateRange() {
     }
 
 
+    // --------------------------------------------------------
+    // Validate against database date range
+    // --------------------------------------------------------
+
+    if (
+        MIN_RAINFALL_DATE &&
+        start < MIN_RAINFALL_DATE
+    ) {
+
+        console.warn(
+            "Start date is before available rainfall data:",
+            start
+        );
+
+        return null;
+    }
+
+
+    if (
+        MAX_RAINFALL_DATE &&
+        end > MAX_RAINFALL_DATE
+    ) {
+
+        console.warn(
+            "End date is after available rainfall data:",
+            end
+        );
+
+        return null;
+    }
+
+
+    if (start > end) {
+
+        console.warn(
+            "Start date cannot be after end date."
+        );
+
+        return null;
+    }
+
+
     return {
         start: start,
         end: end
     };
 }
-
-
 // ============================================================
 // CLEAR MARKER
 // ============================================================
@@ -1314,62 +1463,865 @@ const MONTH_NAMES_RAINFALL = [
 // We NEVER truncate the monthly rainfall data.
 // ============================================================
 
-function drawRainfallChart(
-    data
-) {
+// function drawRainfallChart(
+//     data
+// ) {
 
-    console.log(
-        "Preparing lightweight rainfall chart..."
-    );
+//     console.log(
+//         "Preparing lightweight rainfall chart..."
+//     );
 
+
+//     const container =
+//         document.getElementById(
+//             "rainfallChart"
+//         );
+
+
+//     if (
+//         !container
+//     ) {
+
+//         console.warn(
+//             "#rainfallChart not found."
+//         );
+
+//         return;
+//     }
+
+
+//     // --------------------------------------------------------
+//     // Clear previous chart
+//     // --------------------------------------------------------
+
+//     container.innerHTML = "";
+
+
+//     // --------------------------------------------------------
+//     // Convert daily → monthly
+//     // --------------------------------------------------------
+
+//     const monthly =
+//         aggregateMonthlyRainfall(
+//             data
+//         );
+
+
+//     console.log(
+//         "Monthly data points:",
+//         monthly.length
+//     );
+
+
+//     if (
+//         monthly.length === 0
+//     ) {
+
+//         container.innerHTML =
+//             `
+//             <div style="
+//                 padding:30px;
+//                 text-align:center;
+//                 color:#666;
+//             ">
+//                 No rainfall data available.
+//             </div>
+//             `;
+
+//         return;
+//     }
+
+
+//     // --------------------------------------------------------
+//     // IMPORTANT
+//     //
+//     // Keep ALL monthly points.
+//     //
+//     // Do NOT do:
+//     //
+//     // chartData.slice(...)
+//     // --------------------------------------------------------
+
+//     const chartData =
+//         monthly;
+
+
+//     // --------------------------------------------------------
+//     // Dimensions
+//     // --------------------------------------------------------
+
+//     const width =
+//         Math.max(
+//             container.clientWidth || 700,
+//             500
+//         );
+
+
+//     const height =
+//         350;
+
+
+//     const margin = {
+
+//         top:
+//             30,
+
+//         right:
+//             30,
+
+//         bottom:
+//             65,
+
+//         left:
+//             85
+
+//     };
+
+
+//     const chartWidth =
+//         width -
+//         margin.left -
+//         margin.right;
+
+
+//     const chartHeight =
+//         height -
+//         margin.top -
+//         margin.bottom;
+
+
+//     // --------------------------------------------------------
+//     // Maximum rainfall
+//     // --------------------------------------------------------
+
+//     let maxValue = 0;
+
+
+//     for (
+//         let i = 0;
+//         i < chartData.length;
+//         i++
+//     ) {
+
+//         if (
+//             chartData[i].total >
+//             maxValue
+//         ) {
+
+//             maxValue =
+//                 chartData[i].total;
+//         }
+//     }
+
+
+//     if (
+//         maxValue <= 0
+//     ) {
+
+//         maxValue = 1;
+//     }
+
+
+//     // --------------------------------------------------------
+//     // Add headroom
+//     // --------------------------------------------------------
+
+//     let yMax =
+//         maxValue * 1.10;
+
+
+//     if (
+//         yMax <= 0
+//     ) {
+
+//         yMax = 1;
+//     }
+
+
+//     // --------------------------------------------------------
+//     // Y-axis decimal precision
+//     // --------------------------------------------------------
+
+//     let decimalPlaces = 0;
+
+
+//     if (
+//         yMax < 10
+//     ) {
+
+//         decimalPlaces = 2;
+
+//     } else if (
+//         yMax < 100
+//     ) {
+
+//         decimalPlaces = 1;
+
+//     } else {
+
+//         decimalPlaces = 0;
+//     }
+
+
+//     // --------------------------------------------------------
+//     // SVG
+//     // --------------------------------------------------------
+
+//     const svg =
+//         document.createElementNS(
+//             "http://www.w3.org/2000/svg",
+//             "svg"
+//         );
+
+
+//     svg.setAttribute(
+//         "viewBox",
+//         `0 0 ${width} ${height}`
+//     );
+
+
+//     svg.setAttribute(
+//         "width",
+//         "100%"
+//     );
+
+
+//     svg.setAttribute(
+//         "height",
+//         String(height)
+//     );
+
+
+//     svg.style.display =
+//         "block";
+
+
+//     svg.style.maxWidth =
+//         "100%";
+
+
+//     svg.style.height =
+//         `${height}px`;
+
+
+//     // --------------------------------------------------------
+//     // SVG helper
+//     // --------------------------------------------------------
+
+//     function createSvgElement(
+//         name,
+//         attributes
+//     ) {
+
+//         const element =
+//             document.createElementNS(
+//                 "http://www.w3.org/2000/svg",
+//                 name
+//             );
+
+
+//         Object.keys(
+//             attributes
+//         ).forEach(
+//             key => {
+
+//                 element.setAttribute(
+//                     key,
+//                     attributes[key]
+//                 );
+
+//             }
+//         );
+
+
+//         return element;
+//     }
+
+
+//     // ========================================================
+//     // Y AXIS
+//     // ========================================================
+
+//     const gridCount =
+//         5;
+
+
+//     for (
+//         let i = 0;
+//         i <= gridCount;
+//         i++
+//     ) {
+
+//         const ratio =
+//             i / gridCount;
+
+
+//         const y =
+//             margin.top +
+//             chartHeight -
+//             (
+//                 ratio *
+//                 chartHeight
+//             );
+
+
+//         // ----------------------------------------------------
+//         // Grid line
+//         // ----------------------------------------------------
+
+//         const line =
+//             createSvgElement(
+//                 "line",
+//                 {
+
+//                     x1:
+//                         margin.left,
+
+//                     y1:
+//                         y,
+
+//                     x2:
+//                         width -
+//                         margin.right,
+
+//                     y2:
+//                         y,
+
+//                     stroke:
+//                         "#dddddd",
+
+//                     "stroke-width":
+//                         "1"
+
+//                 }
+//             );
+
+
+//         svg.appendChild(
+//             line
+//         );
+
+
+//         // ----------------------------------------------------
+//         // Y value
+//         // ----------------------------------------------------
+
+//         const value =
+//             yMax *
+//             ratio;
+
+
+//         const text =
+//             createSvgElement(
+//                 "text",
+//                 {
+
+//                     x:
+//                         margin.left - 10,
+
+//                     y:
+//                         y + 4,
+
+//                     "text-anchor":
+//                         "end",
+
+//                     "font-size":
+//                         "11",
+
+//                     fill:
+//                         "#555"
+
+//                 }
+//             );
+
+
+//         text.textContent =
+//             value.toFixed(
+//                 decimalPlaces
+//             );
+
+
+//         svg.appendChild(
+//             text
+//         );
+//     }
+
+
+//     // ========================================================
+//     // X AXIS
+//     // ========================================================
+
+//     const axisY =
+//         margin.top +
+//         chartHeight;
+
+
+//     const axis =
+//         createSvgElement(
+//             "line",
+//             {
+
+//                 x1:
+//                     margin.left,
+
+//                 y1:
+//                     axisY,
+
+//                 x2:
+//                     width -
+//                     margin.right,
+
+//                 y2:
+//                     axisY,
+
+//                 stroke:
+//                     "#333",
+
+//                 "stroke-width":
+//                     "1"
+
+//             }
+//         );
+
+
+//     svg.appendChild(
+//         axis
+//     );
+
+
+//     // ========================================================
+//     // DETERMINE X-AXIS LABEL STRATEGY
+//     // ========================================================
+
+//     let labelInterval = 1;
+
+//     let labelMode = "monthly";
+
+
+//     // --------------------------------------------------------
+//     // Up to 12 months
+//     // --------------------------------------------------------
+
+//     if (
+//         chartData.length <= 12
+//     ) {
+
+//         labelInterval = 1;
+
+//         labelMode = "monthly";
+
+//     }
+
+
+//     // --------------------------------------------------------
+//     // 13–24 months
+//     // --------------------------------------------------------
+
+//     else if (
+//         chartData.length <= 24
+//     ) {
+
+//         labelInterval = 2;
+
+//         labelMode = "monthly";
+
+//     }
+
+
+//     // --------------------------------------------------------
+//     // 25–36 months
+//     // --------------------------------------------------------
+
+//     else if (
+//         chartData.length <= 36
+//     ) {
+
+//         labelInterval = 3;
+
+//         labelMode = "monthly";
+
+//     }
+
+
+//     // --------------------------------------------------------
+//     // More than 36 months
+//     //
+//     // Use year labels.
+//     // --------------------------------------------------------
+
+//     else {
+
+//         labelMode = "year";
+//     }
+
+
+//     console.log(
+//         "X-axis label mode:",
+//         labelMode
+//     );
+
+
+//     // ========================================================
+//     // CALCULATE POINTS
+//     // ========================================================
+
+//     const points = [];
+
+
+//     for (
+//         let i = 0;
+//         i < chartData.length;
+//         i++
+//     ) {
+
+//         const record =
+//             chartData[i];
+
+
+//         // ----------------------------------------------------
+//         // X position
+//         // ----------------------------------------------------
+
+//         const x =
+//             chartData.length === 1
+
+//                 ? margin.left +
+//                   chartWidth / 2
+
+//                 : margin.left +
+//                   (
+//                       i /
+//                       (chartData.length - 1)
+//                   ) *
+//                   chartWidth;
+
+
+//         // ----------------------------------------------------
+//         // Y position
+//         // ----------------------------------------------------
+
+//         const y =
+//             margin.top +
+//             chartHeight -
+//             (
+//                 record.total /
+//                 yMax
+//             ) *
+//             chartHeight;
+
+
+//         points.push(
+//             `${x},${y}`
+//         );
+
+
+//         // ====================================================
+//         // POINT
+//         // ====================================================
+
+//         const circle =
+//             createSvgElement(
+//                 "circle",
+//                 {
+
+//                     cx:
+//                         x,
+
+//                     cy:
+//                         y,
+
+//                     r:
+//                         3.5,
+
+//                     fill:
+//                         "#0077b6"
+
+//                 }
+//             );
+
+
+//         // ----------------------------------------------------
+//         // Tooltip
+//         // ----------------------------------------------------
+
+//         const tooltip =
+//             createSvgElement(
+//                 "title",
+//                 {}
+//             );
+
+
+//         tooltip.textContent =
+//             `${MONTH_NAMES_RAINFALL[
+//                 record.month - 1
+//             ]} ${record.year}
+// Rainfall: ${record.total.toFixed(2)} mm`;
+
+
+//         circle.appendChild(
+//             tooltip
+//         );
+
+
+//         svg.appendChild(
+//             circle
+//         );
+
+
+//         // ====================================================
+//         // X AXIS LABEL
+//         // ====================================================
+
+//         let showLabel =
+//             false;
+
+
+//         let labelText =
+//             "";
+
+
+//         // ----------------------------------------------------
+//         // Monthly mode
+//         // ----------------------------------------------------
+
+//         if (
+//             labelMode === "monthly"
+//         ) {
+
+//             showLabel =
+//                 i % labelInterval === 0 ||
+//                 i === chartData.length - 1;
+
+
+//             labelText =
+//                 `${MONTH_NAMES_RAINFALL[
+//                     record.month - 1
+//                 ]} ${record.year}`;
+
+//         }
+
+
+//         // ----------------------------------------------------
+//         // Year mode
+//         // ----------------------------------------------------
+
+//         else {
+
+//             // Show January
+//             // and first/last point
+
+//             showLabel =
+//                 record.month === 1 ||
+//                 i === 0 ||
+//                 i === chartData.length - 1;
+
+
+//             labelText =
+//                 String(
+//                     record.year
+//                 );
+//         }
+
+
+//         if (
+//             showLabel
+//         ) {
+
+//             const label =
+//                 createSvgElement(
+//                     "text",
+//                     {
+
+//                         x:
+//                             x,
+
+//                         y:
+//                             height - 25,
+
+//                         "text-anchor":
+//                             "middle",
+
+//                         "font-size":
+//                             "11",
+
+//                         fill:
+//                             "#444"
+
+//                     }
+//                 );
+
+
+//             label.textContent =
+//                 labelText;
+
+
+//             svg.appendChild(
+//                 label
+//             );
+//         }
+//     }
+
+
+//     // ========================================================
+//     // LINE
+//     // ========================================================
+
+//     if (
+//         points.length > 1
+//     ) {
+
+//         const polyline =
+//             createSvgElement(
+//                 "polyline",
+//                 {
+
+//                     points:
+//                         points.join(" "),
+
+//                     fill:
+//                         "none",
+
+//                     stroke:
+//                         "#0077b6",
+
+//                     "stroke-width":
+//                         "2"
+
+//                 }
+//             );
+
+
+//         // Put line behind circles
+//         svg.insertBefore(
+//             polyline,
+//             svg.firstChild
+//         );
+//     }
+
+
+//     // ========================================================
+//     // Y AXIS TITLE
+//     // ========================================================
+
+//     const yTitle =
+//         createSvgElement(
+//             "text",
+//             {
+
+//                 x:
+//                     "18",
+
+//                 y:
+//                     height / 2,
+
+//                 "text-anchor":
+//                     "middle",
+
+//                 "font-size":
+//                     "12",
+
+//                 fill:
+//                     "#444",
+
+//                 transform:
+//                     `rotate(-90 18 ${height / 2})`
+
+//             }
+//         );
+
+
+//     yTitle.textContent =
+//         "Rainfall (mm)";
+
+
+//     svg.appendChild(
+//         yTitle
+//     );
+
+
+//     // ========================================================
+//     // CHART TITLE
+//     // ========================================================
+
+//     const title =
+//         createSvgElement(
+//             "text",
+//             {
+
+//                 x:
+//                     width / 2,
+
+//                 y:
+//                     18,
+
+//                 "text-anchor":
+//                     "middle",
+
+//                 "font-size":
+//                     "14",
+
+//                 "font-weight":
+//                     "600",
+
+//                 fill:
+//                     "#004466"
+
+//             }
+//         );
+
+
+//     title.textContent =
+//         "Monthly Rainfall";
+
+
+//     svg.appendChild(
+//         title
+//     );
+
+
+//     // ========================================================
+//     // ADD SVG
+//     // ========================================================
+
+//     container.appendChild(
+//         svg
+//     );
+
+
+//     console.log(
+//         "Lightweight SVG rainfall chart successfully created."
+//     );
+// }
+// -----------------------------------BAR CHART-----
+function drawRainfallChart(data) {
+
+    console.log("Preparing stacked rainfall chart...");
 
     const container =
-        document.getElementById(
-            "rainfallChart"
-        );
+        document.getElementById("rainfallChart");
 
-
-    if (
-        !container
-    ) {
-
-        console.warn(
-            "#rainfallChart not found."
-        );
-
+    if (!container) {
+        console.warn("#rainfallChart not found.");
         return;
     }
 
-
-    // --------------------------------------------------------
-    // Clear previous chart
-    // --------------------------------------------------------
-
     container.innerHTML = "";
 
-
-    // --------------------------------------------------------
-    // Convert daily → monthly
-    // --------------------------------------------------------
+    // ========================================================
+    // YOUR EXISTING AGGREGATION
+    // ========================================================
 
     const monthly =
-        aggregateMonthlyRainfall(
-            data
-        );
-
+        aggregateMonthlyRainfall(data);
 
     console.log(
         "Monthly data points:",
         monthly.length
     );
 
+    if (monthly.length === 0) {
 
-    if (
-        monthly.length === 0
-    ) {
-
-        container.innerHTML =
-            `
+        container.innerHTML = `
             <div style="
                 padding:30px;
                 text-align:center;
@@ -1377,773 +2329,287 @@ function drawRainfallChart(
             ">
                 No rainfall data available.
             </div>
-            `;
+        `;
 
         return;
     }
 
 
-    // --------------------------------------------------------
-    // IMPORTANT
+    // ========================================================
+    // GET UNIQUE YEARS
+    // ========================================================
+
+    const years = [
+        ...new Set(
+            monthly.map(
+                item => item.year
+            )
+        )
+    ].sort(
+        (a, b) => a - b
+    );
+
+    console.log(
+        "Years:",
+        years
+    );
+
+
+    // ========================================================
+    // CREATE MONTHLY DATA
     //
-    // Keep ALL monthly points.
+    // X AXIS:
+    // Jan Feb Mar ... Dec
     //
-    // Do NOT do:
-    //
-    // chartData.slice(...)
-    // --------------------------------------------------------
+    // EACH YEAR:
+    // separate dataset
+    // ========================================================
 
-    const chartData =
-        monthly;
+    const chartLabels = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+    ];
 
 
-    // --------------------------------------------------------
-    // Dimensions
-    // --------------------------------------------------------
+    const datasets =
+        years.map(
+            function(year, yearIndex) {
 
-    const width =
-        Math.max(
-            container.clientWidth || 700,
-            500
+                const values =
+                    chartLabels.map(
+                        function(_, monthIndex) {
+
+                            const month =
+                                monthIndex + 1;
+
+                            const record =
+                                monthly.find(
+                                    item =>
+                                        item.year === year &&
+                                        item.month === month
+                                );
+
+                            return record
+                                ? record.total
+                                : 0;
+                        }
+                    );
+
+
+                return {
+
+                    label:
+                        String(year),
+
+                    data:
+                        values,
+
+                    backgroundColor:
+                        getRainfallYearColor(
+                            yearIndex
+                        ),
+
+                    borderColor:
+                        getRainfallYearColor(
+                            yearIndex
+                        ),
+
+                    borderWidth:
+                        1,
+
+                    stack:
+                        "rainfall"
+
+                };
+
+            }
         );
 
 
-    const height =
-        350;
+    // ========================================================
+    // CREATE CANVAS
+    // ========================================================
 
+    const canvas =
+        document.createElement("canvas");
 
-    const margin = {
-
-        top:
-            30,
-
-        right:
-            30,
-
-        bottom:
-            65,
-
-        left:
-            85
-
-    };
-
-
-    const chartWidth =
-        width -
-        margin.left -
-        margin.right;
-
-
-    const chartHeight =
-        height -
-        margin.top -
-        margin.bottom;
-
-
-    // --------------------------------------------------------
-    // Maximum rainfall
-    // --------------------------------------------------------
-
-    let maxValue = 0;
-
-
-    for (
-        let i = 0;
-        i < chartData.length;
-        i++
-    ) {
-
-        if (
-            chartData[i].total >
-            maxValue
-        ) {
-
-            maxValue =
-                chartData[i].total;
-        }
-    }
-
-
-    if (
-        maxValue <= 0
-    ) {
-
-        maxValue = 1;
-    }
-
-
-    // --------------------------------------------------------
-    // Add headroom
-    // --------------------------------------------------------
-
-    let yMax =
-        maxValue * 1.10;
-
-
-    if (
-        yMax <= 0
-    ) {
-
-        yMax = 1;
-    }
-
-
-    // --------------------------------------------------------
-    // Y-axis decimal precision
-    // --------------------------------------------------------
-
-    let decimalPlaces = 0;
-
-
-    if (
-        yMax < 10
-    ) {
-
-        decimalPlaces = 2;
-
-    } else if (
-        yMax < 100
-    ) {
-
-        decimalPlaces = 1;
-
-    } else {
-
-        decimalPlaces = 0;
-    }
-
-
-    // --------------------------------------------------------
-    // SVG
-    // --------------------------------------------------------
-
-    const svg =
-        document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "svg"
-        );
-
-
-    svg.setAttribute(
-        "viewBox",
-        `0 0 ${width} ${height}`
-    );
-
-
-    svg.setAttribute(
-        "width",
-        "100%"
-    );
-
-
-    svg.setAttribute(
-        "height",
-        String(height)
-    );
-
-
-    svg.style.display =
-        "block";
-
-
-    svg.style.maxWidth =
+    canvas.style.width =
         "100%";
 
-
-    svg.style.height =
-        `${height}px`;
-
-
-    // --------------------------------------------------------
-    // SVG helper
-    // --------------------------------------------------------
-
-    function createSvgElement(
-        name,
-        attributes
-    ) {
-
-        const element =
-            document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                name
-            );
-
-
-        Object.keys(
-            attributes
-        ).forEach(
-            key => {
-
-                element.setAttribute(
-                    key,
-                    attributes[key]
-                );
-
-            }
-        );
-
-
-        return element;
-    }
-
-
-    // ========================================================
-    // Y AXIS
-    // ========================================================
-
-    const gridCount =
-        5;
-
-
-    for (
-        let i = 0;
-        i <= gridCount;
-        i++
-    ) {
-
-        const ratio =
-            i / gridCount;
-
-
-        const y =
-            margin.top +
-            chartHeight -
-            (
-                ratio *
-                chartHeight
-            );
-
-
-        // ----------------------------------------------------
-        // Grid line
-        // ----------------------------------------------------
-
-        const line =
-            createSvgElement(
-                "line",
-                {
-
-                    x1:
-                        margin.left,
-
-                    y1:
-                        y,
-
-                    x2:
-                        width -
-                        margin.right,
-
-                    y2:
-                        y,
-
-                    stroke:
-                        "#dddddd",
-
-                    "stroke-width":
-                        "1"
-
-                }
-            );
-
-
-        svg.appendChild(
-            line
-        );
-
-
-        // ----------------------------------------------------
-        // Y value
-        // ----------------------------------------------------
-
-        const value =
-            yMax *
-            ratio;
-
-
-        const text =
-            createSvgElement(
-                "text",
-                {
-
-                    x:
-                        margin.left - 10,
-
-                    y:
-                        y + 4,
-
-                    "text-anchor":
-                        "end",
-
-                    "font-size":
-                        "11",
-
-                    fill:
-                        "#555"
-
-                }
-            );
-
-
-        text.textContent =
-            value.toFixed(
-                decimalPlaces
-            );
-
-
-        svg.appendChild(
-            text
-        );
-    }
-
-
-    // ========================================================
-    // X AXIS
-    // ========================================================
-
-    const axisY =
-        margin.top +
-        chartHeight;
-
-
-    const axis =
-        createSvgElement(
-            "line",
-            {
-
-                x1:
-                    margin.left,
-
-                y1:
-                    axisY,
-
-                x2:
-                    width -
-                    margin.right,
-
-                y2:
-                    axisY,
-
-                stroke:
-                    "#333",
-
-                "stroke-width":
-                    "1"
-
-            }
-        );
-
-
-    svg.appendChild(
-        axis
-    );
-
-
-    // ========================================================
-    // DETERMINE X-AXIS LABEL STRATEGY
-    // ========================================================
-
-    let labelInterval = 1;
-
-    let labelMode = "monthly";
-
-
-    // --------------------------------------------------------
-    // Up to 12 months
-    // --------------------------------------------------------
-
-    if (
-        chartData.length <= 12
-    ) {
-
-        labelInterval = 1;
-
-        labelMode = "monthly";
-
-    }
-
-
-    // --------------------------------------------------------
-    // 13–24 months
-    // --------------------------------------------------------
-
-    else if (
-        chartData.length <= 24
-    ) {
-
-        labelInterval = 2;
-
-        labelMode = "monthly";
-
-    }
-
-
-    // --------------------------------------------------------
-    // 25–36 months
-    // --------------------------------------------------------
-
-    else if (
-        chartData.length <= 36
-    ) {
-
-        labelInterval = 3;
-
-        labelMode = "monthly";
-
-    }
-
-
-    // --------------------------------------------------------
-    // More than 36 months
-    //
-    // Use year labels.
-    // --------------------------------------------------------
-
-    else {
-
-        labelMode = "year";
-    }
-
-
-    console.log(
-        "X-axis label mode:",
-        labelMode
-    );
-
-
-    // ========================================================
-    // CALCULATE POINTS
-    // ========================================================
-
-    const points = [];
-
-
-    for (
-        let i = 0;
-        i < chartData.length;
-        i++
-    ) {
-
-        const record =
-            chartData[i];
-
-
-        // ----------------------------------------------------
-        // X position
-        // ----------------------------------------------------
-
-        const x =
-            chartData.length === 1
-
-                ? margin.left +
-                  chartWidth / 2
-
-                : margin.left +
-                  (
-                      i /
-                      (chartData.length - 1)
-                  ) *
-                  chartWidth;
-
-
-        // ----------------------------------------------------
-        // Y position
-        // ----------------------------------------------------
-
-        const y =
-            margin.top +
-            chartHeight -
-            (
-                record.total /
-                yMax
-            ) *
-            chartHeight;
-
-
-        points.push(
-            `${x},${y}`
-        );
-
-
-        // ====================================================
-        // POINT
-        // ====================================================
-
-        const circle =
-            createSvgElement(
-                "circle",
-                {
-
-                    cx:
-                        x,
-
-                    cy:
-                        y,
-
-                    r:
-                        3.5,
-
-                    fill:
-                        "#0077b6"
-
-                }
-            );
-
-
-        // ----------------------------------------------------
-        // Tooltip
-        // ----------------------------------------------------
-
-        const tooltip =
-            createSvgElement(
-                "title",
-                {}
-            );
-
-
-        tooltip.textContent =
-            `${MONTH_NAMES_RAINFALL[
-                record.month - 1
-            ]} ${record.year}
-Rainfall: ${record.total.toFixed(2)} mm`;
-
-
-        circle.appendChild(
-            tooltip
-        );
-
-
-        svg.appendChild(
-            circle
-        );
-
-
-        // ====================================================
-        // X AXIS LABEL
-        // ====================================================
-
-        let showLabel =
-            false;
-
-
-        let labelText =
-            "";
-
-
-        // ----------------------------------------------------
-        // Monthly mode
-        // ----------------------------------------------------
-
-        if (
-            labelMode === "monthly"
-        ) {
-
-            showLabel =
-                i % labelInterval === 0 ||
-                i === chartData.length - 1;
-
-
-            labelText =
-                `${MONTH_NAMES_RAINFALL[
-                    record.month - 1
-                ]} ${record.year}`;
-
-        }
-
-
-        // ----------------------------------------------------
-        // Year mode
-        // ----------------------------------------------------
-
-        else {
-
-            // Show January
-            // and first/last point
-
-            showLabel =
-                record.month === 1 ||
-                i === 0 ||
-                i === chartData.length - 1;
-
-
-            labelText =
-                String(
-                    record.year
-                );
-        }
-
-
-        if (
-            showLabel
-        ) {
-
-            const label =
-                createSvgElement(
-                    "text",
-                    {
-
-                        x:
-                            x,
-
-                        y:
-                            height - 25,
-
-                        "text-anchor":
-                            "middle",
-
-                        "font-size":
-                            "11",
-
-                        fill:
-                            "#444"
-
-                    }
-                );
-
-
-            label.textContent =
-                labelText;
-
-
-            svg.appendChild(
-                label
-            );
-        }
-    }
-
-
-    // ========================================================
-    // LINE
-    // ========================================================
-
-    if (
-        points.length > 1
-    ) {
-
-        const polyline =
-            createSvgElement(
-                "polyline",
-                {
-
-                    points:
-                        points.join(" "),
-
-                    fill:
-                        "none",
-
-                    stroke:
-                        "#0077b6",
-
-                    "stroke-width":
-                        "2"
-
-                }
-            );
-
-
-        // Put line behind circles
-        svg.insertBefore(
-            polyline,
-            svg.firstChild
-        );
-    }
-
-
-    // ========================================================
-    // Y AXIS TITLE
-    // ========================================================
-
-    const yTitle =
-        createSvgElement(
-            "text",
-            {
-
-                x:
-                    "18",
-
-                y:
-                    height / 2,
-
-                "text-anchor":
-                    "middle",
-
-                "font-size":
-                    "12",
-
-                fill:
-                    "#444",
-
-                transform:
-                    `rotate(-90 18 ${height / 2})`
-
-            }
-        );
-
-
-    yTitle.textContent =
-        "Rainfall (mm)";
-
-
-    svg.appendChild(
-        yTitle
-    );
-
-
-    // ========================================================
-    // CHART TITLE
-    // ========================================================
-
-    const title =
-        createSvgElement(
-            "text",
-            {
-
-                x:
-                    width / 2,
-
-                y:
-                    18,
-
-                "text-anchor":
-                    "middle",
-
-                "font-size":
-                    "14",
-
-                "font-weight":
-                    "600",
-
-                fill:
-                    "#004466"
-
-            }
-        );
-
-
-    title.textContent =
-        "Monthly Rainfall";
-
-
-    svg.appendChild(
-        title
-    );
-
-
-    // ========================================================
-    // ADD SVG
-    // ========================================================
+    canvas.style.height =
+        "350px";
 
     container.appendChild(
-        svg
+        canvas
+    );
+
+
+    // ========================================================
+    // CHART.JS
+    // ========================================================
+
+    new Chart(
+        canvas,
+        {
+
+            type:
+                "bar",
+
+            data: {
+
+                labels:
+                    chartLabels,
+
+                datasets:
+                    datasets
+
+            },
+
+            options: {
+
+                responsive:
+                    true,
+
+                maintainAspectRatio:
+                    false,
+
+                interaction: {
+
+                    mode:
+                        "index",
+
+                    intersect:
+                        false
+
+                },
+
+                plugins: {
+
+                    title: {
+
+                        display:
+                            true,
+
+                        text:
+                            "Monthly Rainfall"
+
+                    },
+
+                    legend: {
+
+                        display:
+                            true,
+
+                        position:
+                            "top"
+
+                    },
+
+                    tooltip: {
+
+                        callbacks: {
+
+                            label:
+                                function(context) {
+
+                                    return (
+                                        context.dataset.label +
+                                        ": " +
+                                        Number(
+                                            context.raw
+                                        ).toFixed(2) +
+                                        " mm"
+                                    );
+
+                                }
+
+                        }
+
+                    }
+
+                },
+
+                scales: {
+
+                    x: {
+
+                        stacked:
+                            true,
+
+                        title: {
+
+                            display:
+                                true,
+
+                            text:
+                                "Month"
+
+                        }
+
+                    },
+
+                    y: {
+
+                        stacked:
+                            true,
+
+                        beginAtZero:
+                            true,
+
+                        title: {
+
+                            display:
+                                true,
+
+                            text:
+                                "Rainfall (mm)"
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
     );
 
 
     console.log(
-        "Lightweight SVG rainfall chart successfully created."
+        "Stacked rainfall chart created."
     );
 }
+function getRainfallYearColor(index) {
 
+    const colors = [
+
+        "#0077b6",
+        "#f4a261",
+        "#2a9d8f",
+        "#e76f51",
+        "#6a4c93",
+        "#8ab17d",
+        "#e9c46a",
+        "#264653"
+
+    ];
+
+    return colors[
+        index % colors.length
+    ];
+}
+// ---------------------------------------------
 // ============================================================
 // DESTROY CHART
 // ============================================================
@@ -3023,7 +3489,7 @@ if (
         "2023-12-31";
 }
 
-
+loadRainfallDateRange();
 console.log(
     "=============================================="
 );

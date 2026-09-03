@@ -94,6 +94,14 @@ urlpatterns = [
         village_at_point,
         name="village_at_point"
     ),
+    # ============================
+        # Date range selectore api
+        # ===========================
+    path(
+        "rainfall-date-range/",
+        views.rainfall_date_range,
+        name="rainfall_date_range"
+    ),
 
 ]
 if settings.DEBUG:
@@ -106,3 +114,4 @@ if settings.DEBUG:
         settings.STATIC_URL,
         document_root=settings.STATIC_ROOT
     )
+    

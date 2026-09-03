@@ -378,3 +378,35 @@ def village_rainfall_timeseries(request):
             "data": timeseries
         }
     )
+
+# -------------Date range selector api----------------
+
+def rainfall_date_range(request):
+    """
+    Return the minimum and maximum observation dates
+    available in imd_rain_timeseries.
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                MIN(observation_date),
+                MAX(observation_date)
+            FROM imd_rain_timeseries
+        """)
+
+        min_date, max_date = cursor.fetchone()
+
+    if min_date is None or max_date is None:
+        return JsonResponse(
+            {
+                "error": "No rainfall dates available."
+            },
+            status=404
+        )
+
+    return JsonResponse({
+        "min_date": min_date.isoformat(),
+        "max_date": max_date.isoformat()
+    })
+# --------------------------------------------------

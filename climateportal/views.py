@@ -1170,7 +1170,7 @@ def village_boundary_api(request):
                 'village_id',
                 (
                     SELECT id
-                    FROM mahavillages_clean
+                    FROM mh_village_soi1sept26
                     WHERE district = %s
                       AND tehsil = %s
                       AND village = %s
@@ -1193,7 +1193,7 @@ def village_boundary_api(request):
                                 )
                             )
                         )
-                        FROM mahavillages_clean
+                        FROM mh_village_soi1sept26
                         WHERE district = %s
                           AND tehsil = %s
                           AND village = %s
@@ -1258,7 +1258,7 @@ def district_boundary(request):
             ST_AsGeoJSON(
                 ST_Union(geom)
             ) AS geometry
-        FROM mahavillages_clean
+        FROM mh_village_soi1sept26
         WHERE district = %s;
     """
 
@@ -1325,7 +1325,7 @@ def taluka_boundary(request):
             ST_AsGeoJSON(
                 ST_Union(geom)
             ) AS geometry
-        FROM mahavillages_clean
+        FROM mh_village_soi1sept26
         WHERE district = %s
           AND tehsil = %s;
     """
@@ -1398,7 +1398,7 @@ def village_at_point(request):
             district,
             tehsil,
             village
-        FROM mahavillages_clean
+        FROM mh_village_soi1sept26
         WHERE ST_Covers(
             geom,
             ST_SetSRID(

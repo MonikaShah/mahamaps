@@ -73,7 +73,7 @@ def village_rainfall_timeseries(request):
 
         village
             ↓
-        village_rain_grid_weights
+        village_rain_grid_weights_soi1sept26
             ↓
         array_index + weight
             ↓
@@ -151,8 +151,8 @@ def village_rainfall_timeseries(request):
             district,
             tehsil,
             village,
-            ST_AsGeoJSON(geom) AS geometry
-        FROM mahavillages_clean
+            ST_AsGeoJSON(geom) AS gevometry
+        FROM mh_village_soi1sept26
         WHERE id = %s
         LIMIT 1
     """
@@ -205,7 +205,7 @@ def village_rainfall_timeseries(request):
             array_index,
             intersection_area,
             weight
-        FROM village_rain_grid_weights
+        FROM village_rain_grid_weights_soi1sept26
         WHERE village_id = %s
         ORDER BY array_index
     """
@@ -309,7 +309,7 @@ def village_rainfall_timeseries(request):
                 t.grid_values[v.array_index] * v.weight
             ) AS daily_village_rainfall
         FROM imd_rain_timeseries t
-        JOIN village_rain_grid_weights v
+        JOIN village_rain_grid_weights_soi1sept26 v
             ON v.village_id = %s
         WHERE t.observation_date >= %s
         AND t.observation_date <= %s

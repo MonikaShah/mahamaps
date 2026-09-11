@@ -8,16 +8,53 @@ Tables used:
     imd_rain_grid
     imd_rain_timeseries
 
+IMPORTANT
+---------
+imd_rain_grid contains the Maharashtra subset:
+
+    latitude  : 15.25 ... 22.50
+    longitude : 72.25 ... 81.25
+
+Its row_idx / col_idx are LOCAL Maharashtra indices:
+
+    row_idx : 0 ... 29
+    col_idx : 0 ... 36
+
+The downloaded IMD GRD, however, is the FULL India grid:
+
+    latitude  : 6.5 ... 38.5
+    longitude : 66.5 ... 100.0
+
+Therefore we MUST NOT directly use:
+
+    rainfall_grid[row_idx, col_idx]
+
+Instead we convert the database latitude/longitude to
+the GLOBAL IMD GRD row/column.
+
+For example:
+
+    DB:
+        latitude  = 19.00
+        longitude = 75.75
+
+    IMD GRD:
+        row = (19.00 - 6.5) / 0.25 = 50
+        col = (75.75 - 66.5) / 0.25 = 37
+
+    Correct:
+        rainfall_grid[50, 37]
+
 Workflow:
 
-    1. Read latest observation_date from imd_rain_timeseries
+    1. Read latest observation_date
     2. Determine missing dates up to yesterday
-    3. Download each day's IMD 0.25° rainfall GRD file
+    3. Download each day's IMD 0.25° rainfall GRD
     4. Read 129 × 135 float32 values
-    5. Match IMD latitude/longitude with imd_rain_grid
-    6. Build one PostgreSQL array per day
-    7. Insert into imd_rain_timeseries
-    8. Avoid duplicate dates
+    5. Convert DB latitude/longitude to global IMD indices
+    6. Build one PostgreSQL array of 1110 values
+    7. Insert one row per day
+    8. Commit after each successful day
 """
 
 import sys
@@ -39,9 +76,16 @@ BASE_DIR = Path(__file__).resolve().parent
 
 ENV_FILE = BASE_DIR / ".env"
 
-DOWNLOAD_DIR = BASE_DIR / "data" / "rain_realtime"
+DOWNLOAD_DIR = (
+    BASE_DIR
+    / "data"
+    / "rain_realtime"
+)
 
-DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+DOWNLOAD_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
 
 
 # ============================================================
@@ -49,6 +93,7 @@ DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # ============================================================
 
 if not ENV_FILE.exists():
+
     raise FileNotFoundError(
         f".env file not found:\n{ENV_FILE}"
     )
@@ -81,25 +126,40 @@ IMD_RAIN_URL = (
 )
 
 
-# IMD rainfall grid
-#
-# Latitude:
-#     6.5 → 38.5
-#     129 points
-#
-# Longitude:
-#     66.5 → 100.0
-#     135 points
+# ============================================================
+# FULL IMD GRD
+# ============================================================
+
+# Full IMD rainfall GRD dimensions
 
 IMD_LAT_SIZE = 129
 IMD_LON_SIZE = 135
 
+
+# Full IMD grid origin
+
+IMD_MIN_LAT = 6.5
+IMD_MIN_LON = 66.5
+
+
+# IMD resolution
+
+IMD_RESOLUTION = 0.25
+
+
+# Expected number of float32 values
+
 IMD_EXPECTED_VALUES = (
-    IMD_LAT_SIZE * IMD_LON_SIZE
+    IMD_LAT_SIZE
+    * IMD_LON_SIZE
 )
 
+
+# Each float32 = 4 bytes
+
 IMD_EXPECTED_BYTES = (
-    IMD_EXPECTED_VALUES * 4
+    IMD_EXPECTED_VALUES
+    * 4
 )
 
 
@@ -133,7 +193,9 @@ def get_db_connection():
         **DB_CONFIG
     )
 
-    print("Database connection successful.")
+    print(
+        "Database connection successful."
+    )
 
     return connection
 
@@ -167,7 +229,7 @@ def get_latest_date(connection):
     else:
 
         print(
-            f"Latest rainfall date in database: "
+            "Latest rainfall date in database: "
             f"{latest_date}"
         )
 
@@ -210,49 +272,192 @@ def load_imd_grid(connection):
         f"Loaded {len(rows)} grid records."
     )
 
+    # --------------------------------------------------------
+    # Validate expected Maharashtra grid
+    # --------------------------------------------------------
+
+    if len(rows) != 1110:
+
+        print(
+            "WARNING: Expected 1110 Maharashtra "
+            f"grid cells, but found {len(rows)}."
+        )
+
+    # --------------------------------------------------------
+    # Print coordinate/index range
+    # --------------------------------------------------------
+
+    row_indices = [
+        int(row[1])
+        for row in rows
+    ]
+
+    col_indices = [
+        int(row[2])
+        for row in rows
+    ]
+
+    latitudes = [
+        float(row[3])
+        for row in rows
+    ]
+
+    longitudes = [
+        float(row[4])
+        for row in rows
+    ]
+
+    print(
+        "DB row_idx range: "
+        f"{min(row_indices)} - "
+        f"{max(row_indices)}"
+    )
+
+    print(
+        "DB col_idx range: "
+        f"{min(col_indices)} - "
+        f"{max(col_indices)}"
+    )
+
+    print(
+        "DB latitude range: "
+        f"{min(latitudes)} - "
+        f"{max(latitudes)}"
+    )
+
+    print(
+        "DB longitude range: "
+        f"{min(longitudes)} - "
+        f"{max(longitudes)}"
+    )
+
     return rows
 
 
 # ============================================================
-# CREATE GRID MAPPING
+# CONVERT DB COORDINATE → IMD GRD INDEX
 # ============================================================
 
-def create_grid_mapping(grid_rows):
+def coordinate_to_imd_index(
+    latitude,
+    longitude
+):
 
     """
-    Create mapping:
+    Convert a database grid coordinate into
+    the global IMD 129 × 135 GRD index.
 
-        (row_idx, col_idx)
-                ↓
-        array_index
+    IMD GRD:
 
-    PostgreSQL arrays are 1-based.
+        latitude  starts at 6.5
+        longitude starts at 66.5
+        resolution = 0.25°
 
-    Python arrays are 0-based.
+    Example:
 
-    Therefore:
+        latitude  = 19.00
+        longitude = 75.75
 
-        Python index = array_index - 1
+        row = (19.00 - 6.5) / 0.25
+            = 50
+
+        col = (75.75 - 66.5) / 0.25
+            = 37
     """
 
-    mapping = {}
+    row_float = (
+        float(latitude)
+        - IMD_MIN_LAT
+    ) / IMD_RESOLUTION
 
-    for row in grid_rows:
+    col_float = (
+        float(longitude)
+        - IMD_MIN_LON
+    ) / IMD_RESOLUTION
 
-        (
-            grid_id,
-            row_idx,
-            col_idx,
-            latitude,
-            longitude,
-            array_index,
-        ) = row
+    # --------------------------------------------------------
+    # Coordinates should fall exactly on the 0.25° grid.
+    #
+    # round() protects against floating point values such as:
+    #
+    # 36.999999999
+    # --------------------------------------------------------
 
-        mapping[
-            (int(row_idx), int(col_idx))
-        ] = int(array_index)
+    row_idx = int(
+        round(row_float)
+    )
 
-    return mapping
+    col_idx = int(
+        round(col_float)
+    )
+
+    # --------------------------------------------------------
+    # Validate against full IMD GRD
+    # --------------------------------------------------------
+
+    if not (
+        0 <= row_idx < IMD_LAT_SIZE
+    ):
+
+        raise RuntimeError(
+            "Calculated IMD row index is outside "
+            "the GRD.\n"
+            f"Latitude: {latitude}\n"
+            f"Calculated row: {row_idx}\n"
+            f"Expected: 0-{IMD_LAT_SIZE - 1}"
+        )
+
+    if not (
+        0 <= col_idx < IMD_LON_SIZE
+    ):
+
+        raise RuntimeError(
+            "Calculated IMD column index is outside "
+            "the GRD.\n"
+            f"Longitude: {longitude}\n"
+            f"Calculated col: {col_idx}\n"
+            f"Expected: 0-{IMD_LON_SIZE - 1}"
+        )
+
+    # --------------------------------------------------------
+    # Verify coordinate alignment
+    # --------------------------------------------------------
+
+    calculated_lat = (
+        IMD_MIN_LAT
+        + row_idx * IMD_RESOLUTION
+    )
+
+    calculated_lon = (
+        IMD_MIN_LON
+        + col_idx * IMD_RESOLUTION
+    )
+
+    if abs(
+        calculated_lat
+        - float(latitude)
+    ) > 0.001:
+
+        raise RuntimeError(
+            "Latitude does not align with "
+            "IMD 0.25° grid.\n"
+            f"Database latitude: {latitude}\n"
+            f"Calculated latitude: {calculated_lat}"
+        )
+
+    if abs(
+        calculated_lon
+        - float(longitude)
+    ) > 0.001:
+
+        raise RuntimeError(
+            "Longitude does not align with "
+            "IMD 0.25° grid.\n"
+            f"Database longitude: {longitude}\n"
+            f"Calculated longitude: {calculated_lon}"
+        )
+
+    return row_idx, col_idx
 
 
 # ============================================================
@@ -278,10 +483,13 @@ def download_imd_rainfall(
         f".grd"
     )
 
-    filepath = DOWNLOAD_DIR / filename
+    filepath = (
+        DOWNLOAD_DIR
+        / filename
+    )
 
     # --------------------------------------------------------
-    # Already downloaded?
+    # Already downloaded
     # --------------------------------------------------------
 
     if filepath.exists():
@@ -300,9 +508,9 @@ def download_imd_rainfall(
         else:
 
             print(
-                f"  Existing file has wrong size "
+                "  Existing file has wrong size "
                 f"({file_size} bytes). "
-                f"Removing it."
+                "Removing it."
             )
 
             filepath.unlink()
@@ -320,7 +528,8 @@ def download_imd_rainfall(
         print(
             f"  Downloading IMD rainfall "
             f"for {observation_date} "
-            f"(attempt {attempt}/{max_retries})"
+            f"(attempt "
+            f"{attempt}/{max_retries})"
         )
 
         try:
@@ -343,12 +552,12 @@ def download_imd_rainfall(
             )
 
             print(
-                f"  HTTP status: "
+                "  HTTP status: "
                 f"{response.status_code}"
             )
 
             print(
-                f"  Downloaded: "
+                "  Downloaded: "
                 f"{content_length} bytes"
             )
 
@@ -366,7 +575,10 @@ def download_imd_rainfall(
             # Check expected file size
             # ------------------------------------------------
 
-            if content_length != IMD_EXPECTED_BYTES:
+            if (
+                content_length
+                != IMD_EXPECTED_BYTES
+            ):
 
                 raise RuntimeError(
                     "Unexpected IMD file size: "
@@ -398,7 +610,8 @@ def download_imd_rainfall(
             if attempt < max_retries:
 
                 print(
-                    "  Retrying in 10 seconds..."
+                    "  Retrying in "
+                    "10 seconds..."
                 )
 
                 time.sleep(10)
@@ -406,7 +619,7 @@ def download_imd_rainfall(
             else:
 
                 raise RuntimeError(
-                    f"Unable to download IMD "
+                    "Unable to download IMD "
                     f"rainfall for "
                     f"{observation_date}"
                 ) from exc
@@ -431,7 +644,8 @@ def read_imd_grd(filepath):
     """
 
     print(
-        f"  Reading GRD: {filepath.name}"
+        f"  Reading GRD: "
+        f"{filepath.name}"
     )
 
     data = np.fromfile(
@@ -447,12 +661,16 @@ def read_imd_grd(filepath):
     # Validate number of values
     # --------------------------------------------------------
 
-    if len(data) != IMD_EXPECTED_VALUES:
+    if (
+        len(data)
+        != IMD_EXPECTED_VALUES
+    ):
 
         raise RuntimeError(
             "Invalid IMD rainfall file.\n"
             f"Found {len(data)} values.\n"
-            f"Expected {IMD_EXPECTED_VALUES}."
+            f"Expected "
+            f"{IMD_EXPECTED_VALUES}."
         )
 
     # --------------------------------------------------------
@@ -483,22 +701,30 @@ def build_rainfall_array(
 ):
 
     """
-    Convert IMD 129 × 135 grid into the
-    PostgreSQL array expected by
-    imd_rain_timeseries.grid_values.
+    Convert the full IMD 129 × 135 rainfall
+    grid into the PostgreSQL array used by
+    imd_rain_timeseries.
 
-    Mapping is based on row_idx / col_idx.
+    IMPORTANT:
 
-    PostgreSQL array:
+    imd_rain_grid.row_idx / col_idx are
+    LOCAL Maharashtra indices.
 
-        array_index = 1 → Python list index 0
-        array_index = 2 → Python list index 1
-        etc.
+    Therefore they are NOT used directly
+    against rainfall_grid.
+
+    We use latitude/longitude instead.
     """
 
     number_of_db_grids = len(
         grid_rows
     )
+
+    # --------------------------------------------------------
+    # PostgreSQL array
+    #
+    # Start with -999 for missing values.
+    # --------------------------------------------------------
 
     values = np.full(
         number_of_db_grids,
@@ -507,93 +733,126 @@ def build_rainfall_array(
     )
 
     # --------------------------------------------------------
-    # Create latitude/longitude arrays
+    # Statistics
     # --------------------------------------------------------
 
-    # IMD data is stored as:
-    #
-    # latitude:
-    #     6.5 ... 38.5
-    #
-    # longitude:
-    #     66.5 ... 100.0
+    valid_count = 0
+    missing_count = 0
 
     # --------------------------------------------------------
-    # Map every DB grid cell
+    # Process every DB grid cell
     # --------------------------------------------------------
 
     for row in grid_rows:
 
         (
             grid_id,
-            row_idx,
-            col_idx,
+            db_row_idx,
+            db_col_idx,
             latitude,
             longitude,
             array_index,
         ) = row
 
-        row_idx = int(row_idx)
-        col_idx = int(col_idx)
+        grid_id = int(grid_id)
+        db_row_idx = int(db_row_idx)
+        db_col_idx = int(db_col_idx)
         array_index = int(array_index)
 
+        latitude = float(latitude)
+        longitude = float(longitude)
+
         # ----------------------------------------------------
-        # Safety check
+        # Validate PostgreSQL array index
         # ----------------------------------------------------
 
         if not (
-            0 <= row_idx < IMD_LAT_SIZE
+            1 <= array_index
+            <= number_of_db_grids
         ):
 
             raise RuntimeError(
-                f"Invalid row_idx={row_idx} "
-                f"for grid_id={grid_id}"
-            )
-
-        if not (
-            0 <= col_idx < IMD_LON_SIZE
-        ):
-
-            raise RuntimeError(
-                f"Invalid col_idx={col_idx} "
-                f"for grid_id={grid_id}"
-            )
-
-        if not (
-            1 <= array_index <= number_of_db_grids
-        ):
-
-            raise RuntimeError(
-                f"Invalid array_index="
+                "Invalid array_index="
                 f"{array_index} "
                 f"for grid_id={grid_id}"
             )
 
+        # ----------------------------------------------------
+        # Convert DB coordinate to GLOBAL IMD index
+        # ----------------------------------------------------
+
+        imd_row_idx, imd_col_idx = (
+            coordinate_to_imd_index(
+                latitude,
+                longitude
+            )
+        )
+
+        # ----------------------------------------------------
+        # Read correct IMD rainfall cell
+        # ----------------------------------------------------
+
         value = rainfall_grid[
-            row_idx,
-            col_idx
+            imd_row_idx,
+            imd_col_idx
         ]
 
         # ----------------------------------------------------
-        # Convert invalid values
+        # Convert invalid values to -999
         # ----------------------------------------------------
 
         if (
-            np.isnan(value)
-            or np.isinf(value)
+            not np.isfinite(value)
             or value < 0
         ):
 
-            value = -999.0
+            values[
+                array_index - 1
+            ] = -999.0
 
-        # ----------------------------------------------------
-        # PostgreSQL array is 1-based
-        # Python list is 0-based
-        # ----------------------------------------------------
+            missing_count += 1
 
-        values[
-            array_index - 1
-        ] = float(value)
+        else:
+
+            values[
+                array_index - 1
+            ] = float(value)
+
+            valid_count += 1
+
+    # --------------------------------------------------------
+    # Print statistics
+    # --------------------------------------------------------
+
+    print(
+        f"  DB grid cells: "
+        f"{number_of_db_grids}"
+    )
+
+    print(
+        f"  Valid Maharashtra cells: "
+        f"{valid_count}"
+    )
+
+    print(
+        f"  Missing Maharashtra cells: "
+        f"{missing_count}"
+    )
+
+    # --------------------------------------------------------
+    # IMPORTANT VALIDATION
+    #
+    # If an IMD rainfall file has valid data but
+    # absolutely none of the Maharashtra cells
+    # are valid, something is wrong.
+    # --------------------------------------------------------
+
+    if valid_count == 0:
+
+        raise RuntimeError(
+            "No valid rainfall values found "
+            "for any imd_rain_grid cell."
+        )
 
     return values.tolist()
 
@@ -665,7 +924,8 @@ def process_date(
     )
 
     print(
-        f"Processing: {observation_date}"
+        f"Processing: "
+        f"{observation_date}"
     )
 
     print(
@@ -689,12 +949,14 @@ def process_date(
     )
 
     # --------------------------------------------------------
-    # Some useful statistics
+    # Full GRD statistics
     # --------------------------------------------------------
 
     valid = rainfall_grid[
         (
-            np.isfinite(rainfall_grid)
+            np.isfinite(
+                rainfall_grid
+            )
         )
         &
         (
@@ -705,37 +967,82 @@ def process_date(
     if len(valid) > 0:
 
         print(
-            f"  Valid values: {len(valid)}"
+            f"  Full IMD valid values: "
+            f"{len(valid)}"
         )
 
         print(
-            f"  Minimum rainfall: "
+            f"  Full IMD minimum rainfall: "
             f"{float(valid.min()):.3f} mm"
         )
 
         print(
-            f"  Maximum rainfall: "
+            f"  Full IMD maximum rainfall: "
             f"{float(valid.max()):.3f} mm"
         )
 
         print(
-            f"  Mean rainfall: "
+            f"  Full IMD mean rainfall: "
             f"{float(valid.mean()):.3f} mm"
+        )
+
+    else:
+
+        raise RuntimeError(
+            "Downloaded IMD GRD contains "
+            "no valid rainfall values."
         )
 
     # --------------------------------------------------------
     # Build DB array
     # --------------------------------------------------------
 
-    rainfall_values = build_rainfall_array(
-        rainfall_grid,
-        grid_rows
+    rainfall_values = (
+        build_rainfall_array(
+            rainfall_grid,
+            grid_rows
+        )
     )
 
     print(
         f"  DB array length: "
         f"{len(rainfall_values)}"
     )
+
+    # --------------------------------------------------------
+    # IMPORTANT SAMPLE CHECK
+    #
+    # Rajkapur cells:
+    #
+    # array 570 = 19.00, 75.75
+    # array 571 = 19.00, 76.00
+    # --------------------------------------------------------
+
+    if len(rainfall_values) >= 571:
+
+        rajkapur_570 = (
+            rainfall_values[569]
+        )
+
+        rajkapur_571 = (
+            rainfall_values[570]
+        )
+
+        print(
+            "  Rajkapur test cells:"
+        )
+
+        print(
+            "    array_index 570 "
+            f"(19.00,75.75): "
+            f"{rajkapur_570}"
+        )
+
+        print(
+            "    array_index 571 "
+            f"(19.00,76.00): "
+            f"{rajkapur_571}"
+        )
 
     # --------------------------------------------------------
     # Insert
@@ -750,14 +1057,14 @@ def process_date(
     if inserted:
 
         print(
-            f"  INSERTED: "
+            "  INSERTED: "
             f"{observation_date}"
         )
 
     else:
 
         print(
-            f"  Already exists: "
+            "  Already exists: "
             f"{observation_date}"
         )
 
@@ -785,6 +1092,20 @@ def main():
         f"{DOWNLOAD_DIR}"
     )
 
+    print(
+        "\nIMPORTANT:"
+    )
+
+    print(
+        "Using DB latitude/longitude → "
+        "global IMD GRD index mapping."
+    )
+
+    print(
+        "DB row_idx/col_idx are NOT used "
+        "directly against the full IMD GRD."
+    )
+
     connection = None
 
     try:
@@ -793,14 +1114,18 @@ def main():
         # Connect DB
         # ----------------------------------------------------
 
-        connection = get_db_connection()
+        connection = (
+            get_db_connection()
+        )
 
         # ----------------------------------------------------
         # Latest DB date
         # ----------------------------------------------------
 
-        latest_date = get_latest_date(
-            connection
+        latest_date = (
+            get_latest_date(
+                connection
+            )
         )
 
         # ----------------------------------------------------
@@ -826,9 +1151,10 @@ def main():
             raise RuntimeError(
                 "Database contains no rainfall "
                 "records.\n"
-                "Please decide the initial "
-                "historical start date before "
-                "running the automatic updater."
+                "Please insert the historical "
+                "dataset through 2025-12-31 "
+                "before running the automatic "
+                "updater."
             )
 
         start_date = (
@@ -848,11 +1174,13 @@ def main():
             )
 
             print(
-                f"Latest date: {latest_date}"
+                f"Latest date: "
+                f"{latest_date}"
             )
 
             print(
-                f"Yesterday:   {yesterday}"
+                f"Yesterday:   "
+                f"{yesterday}"
             )
 
             connection.close()
@@ -868,7 +1196,7 @@ def main():
         ).days + 1
 
         print(
-            f"\nMissing rainfall dates: "
+            "\nMissing rainfall dates: "
             f"{number_of_days}"
         )
 
@@ -884,8 +1212,10 @@ def main():
         # Load DB grid
         # ----------------------------------------------------
 
-        grid_rows = load_imd_grid(
-            connection
+        grid_rows = (
+            load_imd_grid(
+                connection
+            )
         )
 
         # ----------------------------------------------------
@@ -910,16 +1240,15 @@ def main():
 
                     inserted_count += 1
 
+                    # ------------------------------------------------
                     # Commit after EACH successful day.
-                    #
-                    # This is safer than waiting until
-                    # all dates finish. If day 3 succeeds
-                    # and day 4 fails, days 1-3 remain saved.
+                    # ------------------------------------------------
 
                     connection.commit()
 
                     print(
-                        f"  Database commit successful."
+                        "  Database commit "
+                        "successful."
                     )
 
             except Exception as exc:
@@ -933,10 +1262,6 @@ def main():
                 print(
                     str(exc)
                 )
-
-                # ------------------------------------------------
-                # Roll back failed transaction
-                # ------------------------------------------------
 
                 connection.rollback()
 

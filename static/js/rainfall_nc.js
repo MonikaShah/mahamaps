@@ -2,6 +2,8 @@
 // RAINFALL MONITORING - VILLAGE TIME SERIES
 // IMD NETCDF DATA
 //
+// HIGHSTOCK VERSION
+//
 // IMPORTANT
 // ------------------------------------------------------------
 // location_filter.js owns:
@@ -17,22 +19,25 @@
 //     village boundary
 //     rainfall grid display
 //     rainfall API request
-//     lightweight SVG chart
+//     Highstock rainfall chart
 //
-// IMPORTANT DEBUG VERSION
+// CHART RULES
 // ------------------------------------------------------------
-// Chart.js is intentionally NOT used here.
+// <= 60 days:
+//     Daily rainfall columns
 //
-// The API returns daily data.
-// We aggregate the daily data into monthly totals.
+// > 60 days and <= 5 years:
+//     Monthly rainfall totals
 //
-// Maximum chart points = 12.
+// > 5 years:
+//     Annual rainfall totals
+//
+// Highstock navigator + scrollbar are enabled.
 // ============================================================
 
-let selectedDistrictName = null;
-let selectedTehsilName = null;
+
 console.log("==============================================");
-console.log("rainfall_nc.js loaded");
+console.log("rainfall_nc.js loaded - HIGHSTOCK VERSION");
 console.log("==============================================");
 
 
@@ -40,17 +45,50 @@ console.log("==============================================");
 // GLOBAL STATE
 // ============================================================
 
+let selectedDistrictName = null;
+
+let selectedTehsilName = null;
+
+
+// ------------------------------------------------------------
+// MAP
+// ------------------------------------------------------------
+
 let rainfallMap = null;
+
+let statesWMS = null;
+
+
+// ------------------------------------------------------------
+// VILLAGE
+// ------------------------------------------------------------
 
 let villageMarker = null;
 
 let villageBoundaryLayer = null;
 
+
+// ------------------------------------------------------------
+// GRID
+// ------------------------------------------------------------
+
 let rainfallGridLayer = null;
+
+let selectedGrid = null;
+
+
+// ------------------------------------------------------------
+// API REQUEST
+// ------------------------------------------------------------
 
 let rainfallRequestController = null;
 
 let rainfallRequestSequence = 0;
+
+
+// ------------------------------------------------------------
+// SELECTED VILLAGE
+// ------------------------------------------------------------
 
 let selectedVillageId = null;
 
@@ -60,131 +98,110 @@ let selectedLatitude = null;
 
 let selectedLongitude = null;
 
-let selectedGrid = null;
+
+// ------------------------------------------------------------
+// RAINFALL DATA
+// ------------------------------------------------------------
 
 let rainfallData = [];
 
+
+// ------------------------------------------------------------
+// DATABASE DATE RANGE
+// ------------------------------------------------------------
+
 let MIN_RAINFALL_DATE = null;
+
 let MAX_RAINFALL_DATE = null;
+
+
+// ------------------------------------------------------------
+// HIGHSTOCK INSTANCE
+// ------------------------------------------------------------
+
+let rainfallHighstock = null;
+
+
+// ------------------------------------------------------------
+// CURRENT CHART DATA
+// ------------------------------------------------------------
+
+let rainfallDailySeries = [];
+
+let rainfallMonthlySeries = [];
+
+let rainfallAnnualSeries = [];
+
+
+// ------------------------------------------------------------
+// CHART MODE
+// ------------------------------------------------------------
+
+let rainfallCurrentMode = "day";
+
+
+// ============================================================
+// CONSTANTS
+// ============================================================
 
 const RAINFALL_DATE_RANGE_API =
     "/rainfall-date-range/";
 
-// ============================================================
-// API
-// ============================================================
 
 const RAINFALL_API =
     "/village-rainfall-timeseries/";
 
 
 // ============================================================
-// DOM
+// CHART THRESHOLDS
+// ============================================================
+
+const RAINFALL_DAILY_THRESHOLD_DAYS =
+    60;
+
+
+const RAINFALL_ANNUAL_THRESHOLD_DAYS =
+    365 * 5;
+
+
+const RAINFALL_ONE_DAY =
+    24 * 60 * 60 * 1000;
+
+
+// ============================================================
+// DOM ELEMENTS
 // ============================================================
 
 const rainfallMapElement =
     document.getElementById("map");
 
+
 const startDateElement =
     document.getElementById("startDate");
+
 
 const endDateElement =
     document.getElementById("endDate");
 
+
 const selectedGridInfoElement =
     document.getElementById("selectedGridInfo");
+
 
 const timeseriesMessageElement =
     document.getElementById("timeseriesMessage");
 
+
 const rainfallCheckElement =
     document.getElementById("rainfallCheck");
+
 
 const gridCheckElement =
     document.getElementById("gridCheck");
 
-    // ============================================================
-    // LOAD AVAILABLE RAINFALL DATE RANGE FROM DATABASE
-    // ============================================================
-    
-    async function loadRainfallDateRange() {
-    
-        try {
-    
-            const response =
-                await fetch(
-                    RAINFALL_DATE_RANGE_API,
-                    {
-                        method: "GET",
-                        cache: "no-store"
-                    }
-                );
-    
-            if (!response.ok) {
-    
-                throw new Error(
-                    `HTTP ${response.status}`
-                );
-            }
-    
-            const range =
-                await response.json();
-    
-            if (
-                !range.min_date ||
-                !range.max_date
-            ) {
-    
-                throw new Error(
-                    "Invalid rainfall date range returned by API."
-                );
-            }
-    
-            MIN_RAINFALL_DATE =
-                range.min_date;
-    
-            MAX_RAINFALL_DATE =
-                range.max_date;
-    
-    
-            console.log(
-                "Rainfall DB date range:",
-                MIN_RAINFALL_DATE,
-                "to",
-                MAX_RAINFALL_DATE
-            );
-    
-    
-            if (startDateElement) {
-    
-                startDateElement.min =
-                    MIN_RAINFALL_DATE;
-    
-                startDateElement.max =
-                    MAX_RAINFALL_DATE;
-            }
-    
-    
-            if (endDateElement) {
-    
-                endDateElement.min =
-                    MIN_RAINFALL_DATE;
-    
-                endDateElement.max =
-                    MAX_RAINFALL_DATE;
-            }
-    
-        }
-        catch (error) {
-    
-            console.error(
-                "Could not load rainfall date range:",
-                error
-            );
-        }
-    }
+
 // ============================================================
-// VALIDATE MAP CONTAINER
+// INITIALIZE MAP
 // ============================================================
 
 if (!rainfallMapElement) {
@@ -201,7 +218,7 @@ if (!rainfallMapElement) {
 
 
 // ============================================================
-// INITIALIZE MAP
+// INITIALIZE RAINFALL MAP
 // ============================================================
 
 function initializeRainfallMap() {
@@ -216,7 +233,6 @@ function initializeRainfallMap() {
             rainfallMapElement,
             {
                 zoomControl: true,
-
                 preferCanvas: false
             }
         );
@@ -237,17 +253,40 @@ function initializeRainfallMap() {
     ).addTo(
         rainfallMap
     );
-    statesWMS = L.tileLayer.wms(
-        "https://geonode.communitygis.in/geoserver/geonode/wms",
-        {
-            layers: "geonode:states_in_india",
-            format: "image/png",
-            transparent: true,
-            version: "1.1.1",
-            tiled: true,
-            opacity: 1
-        }
-    ).addTo(rainfallMap);
+
+
+    // --------------------------------------------------------
+    // State boundary WMS
+    // --------------------------------------------------------
+
+    statesWMS =
+        L.tileLayer.wms(
+            "https://geonode.communitygis.in/geoserver/geonode/wms",
+            {
+                layers:
+                    "geonode:states_in_india",
+
+                format:
+                    "image/png",
+
+                transparent:
+                    true,
+
+                version:
+                    "1.1.1",
+
+                tiled:
+                    true,
+
+                opacity:
+                    1
+            }
+        );
+
+
+    statesWMS.addTo(
+        rainfallMap
+    );
 
 
     // --------------------------------------------------------
@@ -263,20 +302,6 @@ function initializeRainfallMap() {
     );
 
 
-    /*
-     * IMPORTANT
-     * --------------------------------------------------------
-     * The GeoNode state WMS is temporarily disabled.
-     *
-     * We are debugging browser stability first.
-     *
-     * Once the page is stable, we can add the WMS back.
-     *
-     * This prevents WMS tile rendering from complicating
-     * the browser-crash diagnosis.
-     */
-
-
     console.log(
         "Rainfall map initialized."
     );
@@ -284,34 +309,164 @@ function initializeRainfallMap() {
 
 
 // ============================================================
-// SAFE DATE READ
+// LOAD AVAILABLE RAINFALL DATE RANGE FROM DATABASE
 // ============================================================
 
-// function getSelectedDateRange() {
+async function loadRainfallDateRange() {
 
-//     const start =
-//         startDateElement
-//             ? startDateElement.value
-//             : null;
+    try {
 
-//     const end =
-//         endDateElement
-//             ? endDateElement.value
-//             : null;
+        console.log(
+            "Loading rainfall database date range..."
+        );
 
 
-//     if (!start || !end) {
+        const response =
+            await fetch(
+                RAINFALL_DATE_RANGE_API,
+                {
+                    method:
+                        "GET",
 
-//         return null;
-//     }
+                    cache:
+                        "no-store"
+                }
+            );
 
 
-//     return {
-//         start: start,
-//         end: end
-//     };
-// }
-// For now, we will validate the date range against the database min/max dates. This prevents unnecessary API calls that will return no data.
+        if (!response.ok) {
+
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+
+        const range =
+            await response.json();
+
+
+        console.log(
+            "Rainfall date range API:",
+            range
+        );
+
+
+        if (
+            !range.min_date ||
+            !range.max_date
+        ) {
+
+            throw new Error(
+                "Invalid rainfall date range returned by API."
+            );
+        }
+
+
+        MIN_RAINFALL_DATE =
+            String(
+                range.min_date
+            ).substring(
+                0,
+                10
+            );
+
+
+        MAX_RAINFALL_DATE =
+            String(
+                range.max_date
+            ).substring(
+                0,
+                10
+            );
+
+
+        console.log(
+            "Rainfall DB date range:",
+            MIN_RAINFALL_DATE,
+            "to",
+            MAX_RAINFALL_DATE
+        );
+
+
+        // ----------------------------------------------------
+        // Update HTML date constraints
+        // ----------------------------------------------------
+
+        if (startDateElement) {
+
+            startDateElement.min =
+                MIN_RAINFALL_DATE;
+
+            startDateElement.max =
+                MAX_RAINFALL_DATE;
+
+
+            // IMPORTANT:
+            // Use database minimum date.
+            //
+            // This fixes the old problem where HTML had:
+            // value="2023-01-01"
+            //
+            // even when DB contained earlier data.
+
+            startDateElement.value =
+                MIN_RAINFALL_DATE;
+        }
+
+
+        if (endDateElement) {
+
+            endDateElement.min =
+                MIN_RAINFALL_DATE;
+
+            endDateElement.max =
+                MAX_RAINFALL_DATE;
+
+
+            // IMPORTANT:
+            // Use database maximum date.
+
+            endDateElement.value =
+                MAX_RAINFALL_DATE;
+        }
+
+
+        console.log(
+            "Date inputs updated from database."
+        );
+
+        console.log(
+            "Start:",
+            startDateElement
+                ? startDateElement.value
+                : null
+        );
+
+        console.log(
+            "End:",
+            endDateElement
+                ? endDateElement.value
+                : null
+        );
+
+    }
+    catch (error) {
+
+        console.error(
+            "Could not load rainfall date range:",
+            error
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// GET SELECTED DATE RANGE
+// ============================================================
+
 function getSelectedDateRange() {
 
     const start =
@@ -319,20 +474,24 @@ function getSelectedDateRange() {
             ? startDateElement.value
             : null;
 
+
     const end =
         endDateElement
             ? endDateElement.value
             : null;
 
 
-    if (!start || !end) {
+    if (
+        !start ||
+        !end
+    ) {
 
         return null;
     }
 
 
     // --------------------------------------------------------
-    // Validate against database date range
+    // Validate against database range
     // --------------------------------------------------------
 
     if (
@@ -363,7 +522,9 @@ function getSelectedDateRange() {
     }
 
 
-    if (start > end) {
+    if (
+        start > end
+    ) {
 
         console.warn(
             "Start date cannot be after end date."
@@ -374,12 +535,19 @@ function getSelectedDateRange() {
 
 
     return {
-        start: start,
-        end: end
+
+        start:
+            start,
+
+        end:
+            end
+
     };
 }
+
+
 // ============================================================
-// CLEAR MARKER
+// CLEAR VILLAGE MARKER
 // ============================================================
 
 function clearVillageMarker() {
@@ -451,7 +619,7 @@ function clearRainfallGrid() {
 
 
 // ============================================================
-// CLEAR MAP SELECTION
+// CLEAR ALL VILLAGE LAYERS
 // ============================================================
 
 function clearVillageLayers() {
@@ -462,11 +630,17 @@ function clearVillageLayers() {
 
     clearRainfallGrid();
 
-    selectedGrid = null;
 
-    selectedLatitude = null;
+    selectedGrid =
+        null;
 
-    selectedLongitude = null;
+
+    selectedLatitude =
+        null;
+
+
+    selectedLongitude =
+        null;
 }
 
 
@@ -514,9 +688,11 @@ function getGeometryCentroid(
             typeof coordinates[1] === "number"
         ) {
 
-            sumLon += coordinates[0];
+            sumLon +=
+                coordinates[0];
 
-            sumLat += coordinates[1];
+            sumLat +=
+                coordinates[1];
 
             count++;
 
@@ -657,6 +833,7 @@ function extractVillageCoordinates(
                 data.latitude
             );
 
+
         const longitude =
             Number(
                 data.longitude
@@ -669,8 +846,13 @@ function extractVillageCoordinates(
         ) {
 
             return {
-                latitude,
-                longitude
+
+                latitude:
+                    latitude,
+
+                longitude:
+                    longitude
+
             };
         }
     }
@@ -720,8 +902,13 @@ function extractVillageCoordinates(
         ) {
 
             return {
-                latitude,
-                longitude
+
+                latitude:
+                    latitude,
+
+                longitude:
+                    longitude
+
             };
         }
 
@@ -740,7 +927,9 @@ function extractVillageCoordinates(
                 );
 
 
-            if (centroid) {
+            if (
+                centroid
+            ) {
 
                 return centroid;
             }
@@ -763,7 +952,9 @@ function extractVillageCoordinates(
             );
 
 
-        if (centroid) {
+        if (
+            centroid
+        ) {
 
             return centroid;
         }
@@ -793,7 +984,8 @@ function drawVillageBoundary(
     }
 
 
-    let geojson = null;
+    let geojson =
+        null;
 
 
     // --------------------------------------------------------
@@ -805,7 +997,8 @@ function drawVillageBoundary(
         data.type === "FeatureCollection"
     ) {
 
-        geojson = data;
+        geojson =
+            data;
     }
 
 
@@ -930,18 +1123,17 @@ function drawVillageMarker(
         );
 
 
-    villageMarker
-        .bindPopup(
-            `
-            <strong>${escapeHtml(villageName)}</strong>
-            <br>
-            Latitude:
-            ${latitude.toFixed(6)}
-            <br>
-            Longitude:
-            ${longitude.toFixed(6)}
-            `
-        );
+    villageMarker.bindPopup(
+        `
+        <strong>${escapeHtml(villageName)}</strong>
+        <br>
+        Latitude:
+        ${latitude.toFixed(6)}
+        <br>
+        Longitude:
+        ${longitude.toFixed(6)}
+        `
+    );
 
 
     villageMarker.addTo(
@@ -1028,15 +1220,6 @@ function displayGridInformation(
 
 // ============================================================
 // DRAW RAINFALL GRID
-//
-// IMPORTANT
-// ------------------------------------------------------------
-// API currently returns only the grid cells actually used
-// for the village.
-//
-// Usually this will be 1 cell.
-//
-// We draw only those cells.
 // ============================================================
 
 function drawRainfallGrid(
@@ -1093,6 +1276,7 @@ function drawRainfallGrid(
                 grid.latitude
             );
 
+
         const longitude =
             Number(
                 grid.longitude
@@ -1109,7 +1293,7 @@ function drawRainfallGrid(
 
 
         // ----------------------------------------------------
-        // IMD 0.25 degree grid
+        // IMD 0.25° grid
         // ----------------------------------------------------
 
         const half =
@@ -1118,6 +1302,7 @@ function drawRainfallGrid(
 
         const bounds =
             [
+
                 [
                     latitude - half,
                     longitude - half
@@ -1127,6 +1312,7 @@ function drawRainfallGrid(
                     latitude + half,
                     longitude + half
                 ]
+
             ];
 
 
@@ -1185,15 +1371,19 @@ function drawRainfallGrid(
     );
 
 
-    // --------------------------------------------------------
-    // Boundary must remain visible above grid
-    // --------------------------------------------------------
-
     if (
         villageBoundaryLayer
     ) {
 
         villageBoundaryLayer.bringToFront();
+    }
+
+
+    if (
+        villageMarker
+    ) {
+
+        villageMarker.bringToFront();
     }
 
 
@@ -1206,7 +1396,7 @@ function drawRainfallGrid(
 
 
 // ============================================================
-// PARSE RAINFALL
+// PARSE RAINFALL VALUE
 // ============================================================
 
 function parseRainfall(
@@ -1215,7 +1405,8 @@ function parseRainfall(
 
     if (
         value === null ||
-        value === undefined
+        value === undefined ||
+        value === ""
     ) {
 
         return null;
@@ -1229,12 +1420,20 @@ function parseRainfall(
 
 
     if (
-        !Number.isFinite(number)
+        !Number.isFinite(
+            number
+        )
     ) {
 
         return null;
     }
 
+
+    // --------------------------------------------------------
+    // IMD missing-value handling
+    //
+    // -999, -9999 etc.
+    // --------------------------------------------------------
 
     if (
         number <= -900
@@ -1249,7 +1448,174 @@ function parseRainfall(
 
 
 // ============================================================
+// PARSE YYYY-MM-DD AS UTC
+//
+// IMPORTANT
+// ------------------------------------------------------------
+// We deliberately do not use:
+//
+// new Date("2023-01-01")
+//
+// for chart dates.
+//
+// Instead we explicitly create UTC timestamps.
+// This avoids timezone shifting of rainfall dates.
+// ============================================================
+
+function rainfallDateToUTC(
+    dateString
+) {
+
+    if (
+        !dateString
+    ) {
+
+        return null;
+    }
+
+
+    const parts =
+        String(
+            dateString
+        ).substring(
+            0,
+            10
+        ).split("-");
+
+
+    if (
+        parts.length !== 3
+    ) {
+
+        return null;
+    }
+
+
+    const year =
+        Number(
+            parts[0]
+        );
+
+
+    const month =
+        Number(
+            parts[1]
+        );
+
+
+    const day =
+        Number(
+            parts[2]
+        );
+
+
+    if (
+        !Number.isFinite(year) ||
+        !Number.isFinite(month) ||
+        !Number.isFinite(day)
+    ) {
+
+        return null;
+    }
+
+
+    return Date.UTC(
+        year,
+        month - 1,
+        day
+    );
+}
+
+
+// ============================================================
+// GET DATE RANGE IN DAYS
+// ============================================================
+
+function getRainfallRangeDays(
+    data
+) {
+
+    if (
+        !Array.isArray(data) ||
+        data.length === 0
+    ) {
+
+        return 0;
+    }
+
+
+    let minTime =
+        null;
+
+
+    let maxTime =
+        null;
+
+
+    for (
+        let i = 0;
+        i < data.length;
+        i++
+    ) {
+
+        const time =
+            rainfallDateToUTC(
+                data[i].date
+            );
+
+
+        if (
+            time === null
+        ) {
+
+            continue;
+        }
+
+
+        if (
+            minTime === null ||
+            time < minTime
+        ) {
+
+            minTime =
+                time;
+        }
+
+
+        if (
+            maxTime === null ||
+            time > maxTime
+        ) {
+
+            maxTime =
+                time;
+        }
+    }
+
+
+    if (
+        minTime === null ||
+        maxTime === null
+    ) {
+
+        return 0;
+    }
+
+
+    return (
+        maxTime - minTime
+    ) /
+    RAINFALL_ONE_DAY;
+}
+
+
+// ============================================================
 // AGGREGATE DAILY → MONTHLY
+// ============================================================
+//
+// Missing rainfall values are NOT included.
+//
+// Monthly total = sum of valid daily rainfall.
 // ============================================================
 
 function aggregateMonthlyRainfall(
@@ -1301,13 +1667,12 @@ function aggregateMonthlyRainfall(
         }
 
 
-        // ----------------------------------------------------
-        // YYYY-MM-DD parsing without Date object
-        // ----------------------------------------------------
-
         const dateParts =
             String(
                 item.date
+            ).substring(
+                0,
+                10
             ).split("-");
 
 
@@ -1353,6 +1718,7 @@ function aggregateMonthlyRainfall(
             months.set(
                 key,
                 {
+
                     year:
                         year,
 
@@ -1361,13 +1727,16 @@ function aggregateMonthlyRainfall(
 
                     total:
                         0
+
                 }
             );
         }
 
 
         const record =
-            months.get(key);
+            months.get(
+                key
+            );
 
 
         record.total +=
@@ -1405,1220 +1774,2101 @@ function aggregateMonthlyRainfall(
 
 
 // ============================================================
-// MONTH NAME
+// AGGREGATE DAILY → ANNUAL
+// ============================================================
+//
+// Annual total = sum of valid daily rainfall.
 // ============================================================
 
-const MONTH_NAMES_RAINFALL = [
+function aggregateAnnualRainfall(
+    data
+) {
 
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec"
+    const years =
+        new Map();
 
-];
+
+    if (
+        !Array.isArray(data)
+    ) {
+
+        return [];
+    }
+
+
+    for (
+        let i = 0;
+        i < data.length;
+        i++
+    ) {
+
+        const item =
+            data[i];
+
+
+        if (
+            !item ||
+            !item.date
+        ) {
+
+            continue;
+        }
+
+
+        const rainfall =
+            parseRainfall(
+                item.rainfall
+            );
+
+
+        if (
+            rainfall === null
+        ) {
+
+            continue;
+        }
+
+
+        const dateParts =
+            String(
+                item.date
+            ).substring(
+                0,
+                10
+            ).split("-");
+
+
+        if (
+            dateParts.length !== 3
+        ) {
+
+            continue;
+        }
+
+
+        const year =
+            Number(
+                dateParts[0]
+            );
+
+
+        if (
+            !Number.isFinite(year)
+        ) {
+
+            continue;
+        }
+
+
+        if (
+            !years.has(year)
+        ) {
+
+            years.set(
+                year,
+                0
+            );
+        }
+
+
+        years.set(
+            year,
+            years.get(year) +
+            rainfall
+        );
+    }
+
+
+    return Array
+        .from(
+            years.entries()
+        )
+        .sort(
+            function (
+                a,
+                b
+            ) {
+
+                return a[0] - b[0];
+
+            }
+        )
+        .map(
+            function (
+                item
+            ) {
+
+                return {
+
+                    year:
+                        item[0],
+
+                    total:
+                        item[1]
+
+                };
+
+            }
+        );
+}
 
 
 // ============================================================
-// CREATE SVG CHART
-//
-// NO CHART.JS
-//
-// This is intentionally simple and lightweight.
-//
-// Maximum points:
-//     12 for one year
-//     more than 12 if the date range is longer
-//
-// The browser therefore never receives a large chart dataset.
+// BUILD DAILY HIGHSTOCK SERIES
 // ============================================================
 
+function buildDailySeries(
+    data
+) {
+
+    const series = [];
+
+
+    if (
+        !Array.isArray(data)
+    ) {
+
+        return series;
+    }
+
+
+    for (
+        let i = 0;
+        i < data.length;
+        i++
+    ) {
+
+        const item =
+            data[i];
+
+
+        const time =
+            rainfallDateToUTC(
+                item.date
+            );
+
+
+        const rainfall =
+            parseRainfall(
+                item.rainfall
+            );
+
+
+        if (
+            time === null
+        ) {
+
+            continue;
+        }
+
+
+        if (
+            rainfall === null
+        ) {
+
+            // ------------------------------------------------
+            // Keep missing values as null.
+            // This allows Highstock to show a gap instead
+            // of falsely treating missing data as zero.
+            // ------------------------------------------------
+
+            series.push(
+                [
+                    time,
+                    null
+                ]
+            );
+
+        } else {
+
+            series.push(
+                [
+                    time,
+                    Number(
+                        rainfall.toFixed(3)
+                    )
+                ]
+            );
+        }
+    }
+
+
+    series.sort(
+        function (
+            a,
+            b
+        ) {
+
+            return a[0] - b[0];
+
+        }
+    );
+
+
+    return series;
+}
+
+
 // ============================================================
-// CREATE SVG CHART
-//
-// MONTHLY TIME SERIES
-//
-// RULES
-// ------------------------------------------------------------
-// <= 12 months:
-//     Monthly points
-//     Monthly labels
-//
-// > 12 months:
-//     Monthly points are ALL retained
-//     X-axis labels become adaptive
-//
-// > 36 months:
-//     Year labels are used
-//
-// IMPORTANT
-// ------------------------------------------------------------
-// We NEVER truncate the monthly rainfall data.
+// BUILD MONTHLY HIGHSTOCK SERIES
 // ============================================================
 
-// function drawRainfallChart(
+function buildMonthlySeries(
+    monthly
+) {
+
+    if (
+        !Array.isArray(monthly)
+    ) {
+
+        return [];
+    }
+
+
+    return monthly.map(
+        function (
+            item
+        ) {
+
+            return [
+
+                Date.UTC(
+                    item.year,
+                    item.month - 1,
+                    1
+                ),
+
+                Number(
+                    item.total.toFixed(3)
+                )
+
+            ];
+
+        }
+    );
+}
+
+
+// ============================================================
+// BUILD ANNUAL HIGHSTOCK SERIES
+// ============================================================
+
+function buildAnnualSeries(
+    annual
+) {
+
+    if (
+        !Array.isArray(annual)
+    ) {
+
+        return [];
+    }
+
+
+    return annual.map(
+        function (
+            item
+        ) {
+
+            return [
+
+                Date.UTC(
+                    item.year,
+                    0,
+                    1
+                ),
+
+                Number(
+                    item.total.toFixed(3)
+                )
+
+            ];
+
+        }
+    );
+}
+
+
+// ============================================================
+// GET CHART MODE
+// ============================================================
+
+function getRainfallChartMode(
+    minTime,
+    maxTime
+) {
+
+    if (
+        minTime === null ||
+        maxTime === null
+    ) {
+
+        return "day";
+    }
+
+
+    const days =
+        (
+            maxTime -
+            minTime
+        ) /
+        RAINFALL_ONE_DAY;
+
+
+    if (
+        days <=
+        RAINFALL_DAILY_THRESHOLD_DAYS
+    ) {
+
+        return "day";
+    }
+
+
+    if (
+        days <=
+        RAINFALL_ANNUAL_THRESHOLD_DAYS
+    ) {
+
+        return "month";
+    }
+
+
+    return "year";
+}
+
+
+// ============================================================
+// GET MODE FROM CURRENT HIGHSTOCK EXTREMES
+// ============================================================
+
+function getModeFromExtremes(
+    minTime,
+    maxTime
+) {
+
+    const days =
+        (
+            maxTime -
+            minTime
+        ) /
+        RAINFALL_ONE_DAY;
+
+
+    if (
+        days <=
+        RAINFALL_DAILY_THRESHOLD_DAYS
+    ) {
+
+        return "day";
+    }
+
+
+    if (
+        days <=
+        RAINFALL_ANNUAL_THRESHOLD_DAYS
+    ) {
+
+        return "month";
+    }
+
+
+    return "year";
+}
+
+
+// ============================================================
+// GET DATA FOR MODE
+// ============================================================
+
+function getRainfallSeriesForMode(
+    mode
+) {
+
+    if (
+        mode === "day"
+    ) {
+
+        return rainfallDailySeries;
+    }
+
+
+    if (
+        mode === "year"
+    ) {
+
+        return rainfallAnnualSeries;
+    }
+
+
+    return rainfallMonthlySeries;
+}
+
+
+// ============================================================
+// GET SERIES NAME
+// ============================================================
+
+function getRainfallSeriesName(
+    mode
+) {
+
+    if (
+        mode === "day"
+    ) {
+
+        return "Rainfall";
+    }
+
+
+    if (
+        mode === "year"
+    ) {
+
+        return "Annual Rainfall";
+    }
+
+
+    return "Monthly Rainfall";
+}
+
+
+// ============================================================
+// GET CHART MODE TEXT
+// ============================================================
+
+function getRainfallModeText(
+    mode
+) {
+
+    if (
+        mode === "day"
+    ) {
+
+        return "Daily";
+    }
+
+
+    if (
+        mode === "year"
+    ) {
+
+        return "Annual";
+    }
+
+
+    return "Monthly";
+}
+
+
+// ============================================================
+// UPDATE TIMESERIES MESSAGE
+// ============================================================
+
+function updateRainfallModeMessage(
+    mode
+) {
+
+    if (
+        !timeseriesMessageElement
+    ) {
+
+        return;
+    }
+
+
+    const recordCount =
+        rainfallData.length;
+
+
+    const text =
+        `${getRainfallModeText(mode)} rainfall • ${recordCount.toLocaleString()} daily records`;
+
+
+    timeseriesMessageElement.textContent =
+        text;
+}
+
+
+// ============================================================
+// CALCULATE RAINFALL STATISTICS
+// ============================================================
+
+// function calculateRainfallStatistics(
 //     data
 // ) {
 
-//     console.log(
-//         "Preparing lightweight rainfall chart..."
-//     );
+//     let total =
+//         0;
 
 
-//     const container =
+//     let rainyDays =
+//         0;
+
+
+//     let wettest =
+//         {
+
+//             time:
+//                 null,
+
+//             value:
+//                 0
+
+//         };
+
+
+//     if (
+//         !Array.isArray(data)
+//     ) {
+
+//         return {
+
+//             total:
+//                 0,
+
+//             wettest:
+//                 wettest,
+
+//             rainyDays:
+//                 0,
+
+//             average:
+//                 0
+
+//         };
+//     }
+
+
+//     for (
+//         let i = 0;
+//         i < data.length;
+//         i++
+//     ) {
+
+//         const item =
+//             data[i];
+
+
+//         const rainfall =
+//             parseRainfall(
+//                 item.rainfall
+//             );
+
+
+//         if (
+//             rainfall === null
+//         ) {
+
+//             continue;
+//         }
+
+
+//         total +=
+//             rainfall;
+
+
+//         if (
+//             rainfall > 0
+//         ) {
+
+//             rainyDays++;
+//         }
+
+
+//         if (
+//             rainfall > wettest.value
+//         ) {
+
+//             wettest = {
+
+//                 time:
+//                     rainfallDateToUTC(
+//                         item.date
+//                     ),
+
+//                 value:
+//                     rainfall
+
+//             };
+//         }
+//     }
+
+
+//     const average =
+//         rainyDays > 0
+//             ? total / rainyDays
+//             : 0;
+
+
+//     return {
+
+//         total:
+//             total,
+
+//         wettest:
+//             wettest,
+
+//         rainyDays:
+//             rainyDays,
+
+//         average:
+//             average
+
+//     };
+// }
+
+
+// // ============================================================
+// // CREATE STATISTICS HEADER
+// // ============================================================
+// //
+// // The supplied standalone HTML has four statistic cards.
+// //
+// // Your Django HTML currently only has #rainfallChart.
+// //
+// // Therefore this function creates the cards automatically
+// // immediately above the Highstock chart.
+// //
+// // ============================================================
+
+// function ensureRainfallStats() {
+
+//     const chartContainer =
 //         document.getElementById(
 //             "rainfallChart"
 //         );
 
 
 //     if (
-//         !container
+//         !chartContainer
 //     ) {
 
-//         console.warn(
-//             "#rainfallChart not found."
-//         );
-
-//         return;
+//         return null;
 //     }
 
 
+//     let stats =
+//         document.getElementById(
+//             "rainfallStats"
+//         );
+
+
+//     if (
+//         stats
+//     ) {
+
+//         return stats;
+//     }
+
+
+//     stats =
+//         document.createElement(
+//             "div"
+//         );
+
+
+//     stats.id =
+//         "rainfallStats";
+
+
+//     stats.innerHTML =
+//         `
+//         <div class="rainfall-stat-card">
+//             <div
+//                 class="rainfall-stat-value"
+//                 id="stat-total"
+//             >—</div>
+
+//             <div class="rainfall-stat-label">
+//                 Total rainfall (mm)
+//             </div>
+//         </div>
+
+//         <div class="rainfall-stat-card">
+//             <div
+//                 class="rainfall-stat-value"
+//                 id="stat-wettest"
+//             >—</div>
+
+//             <div class="rainfall-stat-label">
+//                 Wettest day (mm)
+//             </div>
+//         </div>
+
+//         <div class="rainfall-stat-card">
+//             <div
+//                 class="rainfall-stat-value"
+//                 id="stat-rainy"
+//             >—</div>
+
+//             <div class="rainfall-stat-label">
+//                 Rainy days
+//             </div>
+//         </div>
+
+//         <div class="rainfall-stat-card">
+//             <div
+//                 class="rainfall-stat-value"
+//                 id="stat-avg"
+//             >—</div>
+
+//             <div class="rainfall-stat-label">
+//                 Avg. per rainy day (mm)
+//             </div>
+//         </div>
+//         `;
+
+
 //     // --------------------------------------------------------
-//     // Clear previous chart
+//     // Styling matching supplied HTML
 //     // --------------------------------------------------------
 
-//     container.innerHTML = "";
+//     stats.style.display =
+//         "grid";
+
+
+//     stats.style.gridTemplateColumns =
+//         "repeat(4, minmax(0, 1fr))";
+
+
+//     stats.style.gap =
+//         "12px";
+
+
+//     stats.style.marginBottom =
+//         "15px";
+
+
+//     chartContainer.parentNode.insertBefore(
+//         stats,
+//         chartContainer
+//     );
+
+
+//     const cards =
+//         stats.querySelectorAll(
+//             ".rainfall-stat-card"
+//         );
+
+
+//     cards.forEach(
+//         function(card) {
+
+//             card.style.background =
+//                 "#FFFFFF";
+
+//             card.style.border =
+//                 "1px solid #E3E9EE";
+
+//             card.style.borderRadius =
+//                 "10px";
+
+//             card.style.padding =
+//                 "14px 16px";
+//         }
+//     );
+
+
+//     const values =
+//         stats.querySelectorAll(
+//             ".rainfall-stat-value"
+//         );
+
+
+//     values.forEach(
+//         function(value) {
+
+//             value.style.fontSize =
+//                 "21px";
+
+//             value.style.fontWeight =
+//                 "650";
+
+//             value.style.lineHeight =
+//                 "1.2";
+//         }
+//     );
+
+
+//     const labels =
+//         stats.querySelectorAll(
+//             ".rainfall-stat-label"
+//         );
+
+
+//     labels.forEach(
+//         function(label) {
+
+//             label.style.fontSize =
+//                 "13px";
+
+//             label.style.color =
+//                 "#6B7785";
+
+//             label.style.marginTop =
+//                 "3px";
+//         }
+//     );
 
 
 //     // --------------------------------------------------------
-//     // Convert daily → monthly
+//     // Responsive
 //     // --------------------------------------------------------
 
-//     const monthly =
-//         aggregateMonthlyRainfall(
+//     const responsiveStyle =
+//         document.createElement(
+//             "style"
+//         );
+
+
+//     responsiveStyle.id =
+//         "rainfallStatsResponsiveStyle";
+
+
+//     responsiveStyle.textContent =
+//         `
+//         @media (max-width: 700px) {
+
+//             #rainfallStats {
+//                 grid-template-columns:
+//                     repeat(2, minmax(0, 1fr)) !important;
+//             }
+
+//         }
+
+//         @media (max-width: 450px) {
+
+//             #rainfallStats {
+//                 grid-template-columns:
+//                     1fr !important;
+//             }
+
+//         }
+//         `;
+
+
+//     if (
+//         !document.getElementById(
+//             "rainfallStatsResponsiveStyle"
+//         )
+//     ) {
+
+//         document.head.appendChild(
+//             responsiveStyle
+//         );
+//     }
+
+
+//     return stats;
+// }
+
+
+// // ============================================================
+// // UPDATE STATISTICS
+// // ============================================================
+
+// function updateRainfallStatistics(
+//     data
+// ) {
+
+//     ensureRainfallStats();
+
+
+//     const statistics =
+//         calculateRainfallStatistics(
 //             data
 //         );
 
 
-//     console.log(
-//         "Monthly data points:",
-//         monthly.length
-//     );
-
-
-//     if (
-//         monthly.length === 0
-//     ) {
-
-//         container.innerHTML =
-//             `
-//             <div style="
-//                 padding:30px;
-//                 text-align:center;
-//                 color:#666;
-//             ">
-//                 No rainfall data available.
-//             </div>
-//             `;
-
-//         return;
-//     }
-
-
-//     // --------------------------------------------------------
-//     // IMPORTANT
-//     //
-//     // Keep ALL monthly points.
-//     //
-//     // Do NOT do:
-//     //
-//     // chartData.slice(...)
-//     // --------------------------------------------------------
-
-//     const chartData =
-//         monthly;
-
-
-//     // --------------------------------------------------------
-//     // Dimensions
-//     // --------------------------------------------------------
-
-//     const width =
-//         Math.max(
-//             container.clientWidth || 700,
-//             500
+//     const totalElement =
+//         document.getElementById(
+//             "stat-total"
 //         );
 
 
-//     const height =
-//         350;
+//     const wettestElement =
+//         document.getElementById(
+//             "stat-wettest"
+//         );
 
 
-//     const margin = {
-
-//         top:
-//             30,
-
-//         right:
-//             30,
-
-//         bottom:
-//             65,
-
-//         left:
-//             85
-
-//     };
+//     const rainyElement =
+//         document.getElementById(
+//             "stat-rainy"
+//         );
 
 
-//     const chartWidth =
-//         width -
-//         margin.left -
-//         margin.right;
+//     const averageElement =
+//         document.getElementById(
+//             "stat-avg"
+//         );
 
 
-//     const chartHeight =
-//         height -
-//         margin.top -
-//         margin.bottom;
+//     if (
+//         totalElement
+//     ) {
+
+//         totalElement.textContent =
+//             statistics.total.toLocaleString(
+//                 undefined,
+//                 {
+//                     maximumFractionDigits:
+//                         1
+//                 }
+//             );
+//     }
 
 
-//     // --------------------------------------------------------
-//     // Maximum rainfall
-//     // --------------------------------------------------------
-
-//     let maxValue = 0;
-
-
-//     for (
-//         let i = 0;
-//         i < chartData.length;
-//         i++
+//     if (
+//         wettestElement
 //     ) {
 
 //         if (
-//             chartData[i].total >
-//             maxValue
+//             statistics.wettest.time !== null
 //         ) {
 
-//             maxValue =
-//                 chartData[i].total;
+//             wettestElement.textContent =
+//                 `${statistics.wettest.value.toFixed(1)} (${Highcharts.dateFormat(
+//                     "%d %b %Y",
+//                     statistics.wettest.time
+//                 )})`;
+
+//         } else {
+
+//             wettestElement.textContent =
+//                 "—";
 //         }
 //     }
 
 
 //     if (
-//         maxValue <= 0
+//         rainyElement
 //     ) {
 
-//         maxValue = 1;
+//         rainyElement.textContent =
+//             statistics.rainyDays.toLocaleString();
 //     }
-
-
-//     // --------------------------------------------------------
-//     // Add headroom
-//     // --------------------------------------------------------
-
-//     let yMax =
-//         maxValue * 1.10;
 
 
 //     if (
-//         yMax <= 0
+//         averageElement
 //     ) {
 
-//         yMax = 1;
+//         averageElement.textContent =
+//             statistics.rainyDays > 0
+//                 ? statistics.average.toFixed(1)
+//                 : "—";
 //     }
-
-
-//     // --------------------------------------------------------
-//     // Y-axis decimal precision
-//     // --------------------------------------------------------
-
-//     let decimalPlaces = 0;
-
-
-//     if (
-//         yMax < 10
-//     ) {
-
-//         decimalPlaces = 2;
-
-//     } else if (
-//         yMax < 100
-//     ) {
-
-//         decimalPlaces = 1;
-
-//     } else {
-
-//         decimalPlaces = 0;
-//     }
-
-
-//     // --------------------------------------------------------
-//     // SVG
-//     // --------------------------------------------------------
-
-//     const svg =
-//         document.createElementNS(
-//             "http://www.w3.org/2000/svg",
-//             "svg"
-//         );
-
-
-//     svg.setAttribute(
-//         "viewBox",
-//         `0 0 ${width} ${height}`
-//     );
-
-
-//     svg.setAttribute(
-//         "width",
-//         "100%"
-//     );
-
-
-//     svg.setAttribute(
-//         "height",
-//         String(height)
-//     );
-
-
-//     svg.style.display =
-//         "block";
-
-
-//     svg.style.maxWidth =
-//         "100%";
-
-
-//     svg.style.height =
-//         `${height}px`;
-
-
-//     // --------------------------------------------------------
-//     // SVG helper
-//     // --------------------------------------------------------
-
-//     function createSvgElement(
-//         name,
-//         attributes
-//     ) {
-
-//         const element =
-//             document.createElementNS(
-//                 "http://www.w3.org/2000/svg",
-//                 name
-//             );
-
-
-//         Object.keys(
-//             attributes
-//         ).forEach(
-//             key => {
-
-//                 element.setAttribute(
-//                     key,
-//                     attributes[key]
-//                 );
-
-//             }
-//         );
-
-
-//         return element;
-//     }
-
-
-//     // ========================================================
-//     // Y AXIS
-//     // ========================================================
-
-//     const gridCount =
-//         5;
-
-
-//     for (
-//         let i = 0;
-//         i <= gridCount;
-//         i++
-//     ) {
-
-//         const ratio =
-//             i / gridCount;
-
-
-//         const y =
-//             margin.top +
-//             chartHeight -
-//             (
-//                 ratio *
-//                 chartHeight
-//             );
-
-
-//         // ----------------------------------------------------
-//         // Grid line
-//         // ----------------------------------------------------
-
-//         const line =
-//             createSvgElement(
-//                 "line",
-//                 {
-
-//                     x1:
-//                         margin.left,
-
-//                     y1:
-//                         y,
-
-//                     x2:
-//                         width -
-//                         margin.right,
-
-//                     y2:
-//                         y,
-
-//                     stroke:
-//                         "#dddddd",
-
-//                     "stroke-width":
-//                         "1"
-
-//                 }
-//             );
-
-
-//         svg.appendChild(
-//             line
-//         );
-
-
-//         // ----------------------------------------------------
-//         // Y value
-//         // ----------------------------------------------------
-
-//         const value =
-//             yMax *
-//             ratio;
-
-
-//         const text =
-//             createSvgElement(
-//                 "text",
-//                 {
-
-//                     x:
-//                         margin.left - 10,
-
-//                     y:
-//                         y + 4,
-
-//                     "text-anchor":
-//                         "end",
-
-//                     "font-size":
-//                         "11",
-
-//                     fill:
-//                         "#555"
-
-//                 }
-//             );
-
-
-//         text.textContent =
-//             value.toFixed(
-//                 decimalPlaces
-//             );
-
-
-//         svg.appendChild(
-//             text
-//         );
-//     }
-
-
-//     // ========================================================
-//     // X AXIS
-//     // ========================================================
-
-//     const axisY =
-//         margin.top +
-//         chartHeight;
-
-
-//     const axis =
-//         createSvgElement(
-//             "line",
-//             {
-
-//                 x1:
-//                     margin.left,
-
-//                 y1:
-//                     axisY,
-
-//                 x2:
-//                     width -
-//                     margin.right,
-
-//                 y2:
-//                     axisY,
-
-//                 stroke:
-//                     "#333",
-
-//                 "stroke-width":
-//                     "1"
-
-//             }
-//         );
-
-
-//     svg.appendChild(
-//         axis
-//     );
-
-
-//     // ========================================================
-//     // DETERMINE X-AXIS LABEL STRATEGY
-//     // ========================================================
-
-//     let labelInterval = 1;
-
-//     let labelMode = "monthly";
-
-
-//     // --------------------------------------------------------
-//     // Up to 12 months
-//     // --------------------------------------------------------
-
-//     if (
-//         chartData.length <= 12
-//     ) {
-
-//         labelInterval = 1;
-
-//         labelMode = "monthly";
-
-//     }
-
-
-//     // --------------------------------------------------------
-//     // 13–24 months
-//     // --------------------------------------------------------
-
-//     else if (
-//         chartData.length <= 24
-//     ) {
-
-//         labelInterval = 2;
-
-//         labelMode = "monthly";
-
-//     }
-
-
-//     // --------------------------------------------------------
-//     // 25–36 months
-//     // --------------------------------------------------------
-
-//     else if (
-//         chartData.length <= 36
-//     ) {
-
-//         labelInterval = 3;
-
-//         labelMode = "monthly";
-
-//     }
-
-
-//     // --------------------------------------------------------
-//     // More than 36 months
-//     //
-//     // Use year labels.
-//     // --------------------------------------------------------
-
-//     else {
-
-//         labelMode = "year";
-//     }
-
-
-//     console.log(
-//         "X-axis label mode:",
-//         labelMode
-//     );
-
-
-//     // ========================================================
-//     // CALCULATE POINTS
-//     // ========================================================
-
-//     const points = [];
-
-
-//     for (
-//         let i = 0;
-//         i < chartData.length;
-//         i++
-//     ) {
-
-//         const record =
-//             chartData[i];
-
-
-//         // ----------------------------------------------------
-//         // X position
-//         // ----------------------------------------------------
-
-//         const x =
-//             chartData.length === 1
-
-//                 ? margin.left +
-//                   chartWidth / 2
-
-//                 : margin.left +
-//                   (
-//                       i /
-//                       (chartData.length - 1)
-//                   ) *
-//                   chartWidth;
-
-
-//         // ----------------------------------------------------
-//         // Y position
-//         // ----------------------------------------------------
-
-//         const y =
-//             margin.top +
-//             chartHeight -
-//             (
-//                 record.total /
-//                 yMax
-//             ) *
-//             chartHeight;
-
-
-//         points.push(
-//             `${x},${y}`
-//         );
-
-
-//         // ====================================================
-//         // POINT
-//         // ====================================================
-
-//         const circle =
-//             createSvgElement(
-//                 "circle",
-//                 {
-
-//                     cx:
-//                         x,
-
-//                     cy:
-//                         y,
-
-//                     r:
-//                         3.5,
-
-//                     fill:
-//                         "#0077b6"
-
-//                 }
-//             );
-
-
-//         // ----------------------------------------------------
-//         // Tooltip
-//         // ----------------------------------------------------
-
-//         const tooltip =
-//             createSvgElement(
-//                 "title",
-//                 {}
-//             );
-
-
-//         tooltip.textContent =
-//             `${MONTH_NAMES_RAINFALL[
-//                 record.month - 1
-//             ]} ${record.year}
-// Rainfall: ${record.total.toFixed(2)} mm`;
-
-
-//         circle.appendChild(
-//             tooltip
-//         );
-
-
-//         svg.appendChild(
-//             circle
-//         );
-
-
-//         // ====================================================
-//         // X AXIS LABEL
-//         // ====================================================
-
-//         let showLabel =
-//             false;
-
-
-//         let labelText =
-//             "";
-
-
-//         // ----------------------------------------------------
-//         // Monthly mode
-//         // ----------------------------------------------------
-
-//         if (
-//             labelMode === "monthly"
-//         ) {
-
-//             showLabel =
-//                 i % labelInterval === 0 ||
-//                 i === chartData.length - 1;
-
-
-//             labelText =
-//                 `${MONTH_NAMES_RAINFALL[
-//                     record.month - 1
-//                 ]} ${record.year}`;
-
-//         }
-
-
-//         // ----------------------------------------------------
-//         // Year mode
-//         // ----------------------------------------------------
-
-//         else {
-
-//             // Show January
-//             // and first/last point
-
-//             showLabel =
-//                 record.month === 1 ||
-//                 i === 0 ||
-//                 i === chartData.length - 1;
-
-
-//             labelText =
-//                 String(
-//                     record.year
-//                 );
-//         }
-
-
-//         if (
-//             showLabel
-//         ) {
-
-//             const label =
-//                 createSvgElement(
-//                     "text",
-//                     {
-
-//                         x:
-//                             x,
-
-//                         y:
-//                             height - 25,
-
-//                         "text-anchor":
-//                             "middle",
-
-//                         "font-size":
-//                             "11",
-
-//                         fill:
-//                             "#444"
-
-//                     }
-//                 );
-
-
-//             label.textContent =
-//                 labelText;
-
-
-//             svg.appendChild(
-//                 label
-//             );
-//         }
-//     }
-
-
-//     // ========================================================
-//     // LINE
-//     // ========================================================
-
-//     if (
-//         points.length > 1
-//     ) {
-
-//         const polyline =
-//             createSvgElement(
-//                 "polyline",
-//                 {
-
-//                     points:
-//                         points.join(" "),
-
-//                     fill:
-//                         "none",
-
-//                     stroke:
-//                         "#0077b6",
-
-//                     "stroke-width":
-//                         "2"
-
-//                 }
-//             );
-
-
-//         // Put line behind circles
-//         svg.insertBefore(
-//             polyline,
-//             svg.firstChild
-//         );
-//     }
-
-
-//     // ========================================================
-//     // Y AXIS TITLE
-//     // ========================================================
-
-//     const yTitle =
-//         createSvgElement(
-//             "text",
-//             {
-
-//                 x:
-//                     "18",
-
-//                 y:
-//                     height / 2,
-
-//                 "text-anchor":
-//                     "middle",
-
-//                 "font-size":
-//                     "12",
-
-//                 fill:
-//                     "#444",
-
-//                 transform:
-//                     `rotate(-90 18 ${height / 2})`
-
-//             }
-//         );
-
-
-//     yTitle.textContent =
-//         "Rainfall (mm)";
-
-
-//     svg.appendChild(
-//         yTitle
-//     );
-
-
-//     // ========================================================
-//     // CHART TITLE
-//     // ========================================================
-
-//     const title =
-//         createSvgElement(
-//             "text",
-//             {
-
-//                 x:
-//                     width / 2,
-
-//                 y:
-//                     18,
-
-//                 "text-anchor":
-//                     "middle",
-
-//                 "font-size":
-//                     "14",
-
-//                 "font-weight":
-//                     "600",
-
-//                 fill:
-//                     "#004466"
-
-//             }
-//         );
-
-
-//     title.textContent =
-//         "Monthly Rainfall";
-
-
-//     svg.appendChild(
-//         title
-//     );
-
-
-//     // ========================================================
-//     // ADD SVG
-//     // ========================================================
-
-//     container.appendChild(
-//         svg
-//     );
-
-
-//     console.log(
-//         "Lightweight SVG rainfall chart successfully created."
-//     );
 // }
-// -----------------------------------BAR CHART-----
-function drawRainfallChart(data) {
 
-    console.log("Preparing stacked rainfall chart...");
+
+// ============================================================
+// SET CHART HEIGHT
+// ============================================================
+
+function prepareRainfallChartContainer() {
 
     const container =
-        document.getElementById("rainfallChart");
-
-    if (!container) {
-        console.warn("#rainfallChart not found.");
-        return;
-    }
-
-    container.innerHTML = "";
-
-    // ========================================================
-    // YOUR EXISTING AGGREGATION
-    // ========================================================
-
-    const monthly =
-        aggregateMonthlyRainfall(data);
-
-    console.log(
-        "Monthly data points:",
-        monthly.length
-    );
-
-    if (monthly.length === 0) {
-
-        container.innerHTML = `
-            <div style="
-                padding:30px;
-                text-align:center;
-                color:#666;
-            ">
-                No rainfall data available.
-            </div>
-        `;
-
-        return;
-    }
-
-
-    // ========================================================
-    // GET UNIQUE YEARS
-    // ========================================================
-
-    const years = [
-        ...new Set(
-            monthly.map(
-                item => item.year
-            )
-        )
-    ].sort(
-        (a, b) => a - b
-    );
-
-    console.log(
-        "Years:",
-        years
-    );
-
-
-    // ========================================================
-    // CREATE MONTHLY DATA
-    //
-    // X AXIS:
-    // Jan Feb Mar ... Dec
-    //
-    // EACH YEAR:
-    // separate dataset
-    // ========================================================
-
-    const chartLabels = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
-    ];
-
-
-    const datasets =
-        years.map(
-            function(year, yearIndex) {
-
-                const values =
-                    chartLabels.map(
-                        function(_, monthIndex) {
-
-                            const month =
-                                monthIndex + 1;
-
-                            const record =
-                                monthly.find(
-                                    item =>
-                                        item.year === year &&
-                                        item.month === month
-                                );
-
-                            return record
-                                ? record.total
-                                : 0;
-                        }
-                    );
-
-
-                return {
-
-                    label:
-                        String(year),
-
-                    data:
-                        values,
-
-                    backgroundColor:
-                        getRainfallYearColor(
-                            yearIndex
-                        ),
-
-                    borderColor:
-                        getRainfallYearColor(
-                            yearIndex
-                        ),
-
-                    borderWidth:
-                        1,
-
-                    stack:
-                        "rainfall"
-
-                };
-
-            }
+        document.getElementById(
+            "rainfallChart"
         );
 
 
-    // ========================================================
-    // CREATE CANVAS
-    // ========================================================
+    if (
+        !container
+    ) {
 
-    const canvas =
-        document.createElement("canvas");
+        return;
+    }
 
-    canvas.style.width =
+
+    // --------------------------------------------------------
+    // Supplied HTML uses 620px.
+    // --------------------------------------------------------
+
+    container.style.width =
         "100%";
 
-    canvas.style.height =
-        "350px";
 
-    container.appendChild(
-        canvas
+    container.style.height =
+        "620px";
+
+
+    container.style.minHeight =
+        "620px";
+
+
+    container.style.display =
+        "block";
+}
+
+
+// ============================================================
+// CREATE / UPDATE HIGHSTOCK CHART
+// ============================================================
+
+function drawRainfallChart(
+    data
+) {
+
+    console.log(
+        "=============================================="
     );
 
 
-    // ========================================================
-    // CHART.JS
-    // ========================================================
+    console.log(
+        "Preparing Highstock rainfall chart..."
+    );
 
-    new Chart(
-        canvas,
+
+    const container =
+        document.getElementById(
+            "rainfallChart"
+        );
+
+
+    if (
+        !container
+    ) {
+
+        console.warn(
+            "#rainfallChart not found."
+        );
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // Highstock availability
+    // --------------------------------------------------------
+
+    if (
+        typeof Highcharts === "undefined"
+    ) {
+
+        console.error(
+            "Highcharts / Highstock is not loaded."
+        );
+
+
+        container.innerHTML =
+            `
+            <div style="
+                padding:40px;
+                text-align:center;
+                color:#6B7785;
+            ">
+                Highstock could not be loaded.
+                Please check the Highstock script.
+            </div>
+            `;
+
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // Prepare
+    // --------------------------------------------------------
+
+    prepareRainfallChartContainer();
+
+
+    // ensureRainfallStats();
+
+
+    // --------------------------------------------------------
+    // No data
+    // --------------------------------------------------------
+
+    if (
+        !Array.isArray(data) ||
+        data.length === 0
+    ) {
+
+        destroyRainfallChart();
+
+
+        container.innerHTML =
+            `
+            <div style="
+                padding:40px;
+                text-align:center;
+                color:#6B7785;
+            ">
+                No rainfall data available.
+            </div>
+            `;
+
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // Build all resolutions once.
+    //
+    // This is important because the chart can change
+    // between daily/monthly/annual while zooming.
+    // --------------------------------------------------------
+
+    rainfallDailySeries =
+        buildDailySeries(
+            data
+        );
+
+
+    const monthly =
+        aggregateMonthlyRainfall(
+            data
+        );
+
+
+    rainfallMonthlySeries =
+        buildMonthlySeries(
+            monthly
+        );
+
+
+    const annual =
+        aggregateAnnualRainfall(
+            data
+        );
+
+
+    rainfallAnnualSeries =
+        buildAnnualSeries(
+            annual
+        );
+
+
+    console.log(
+        "Highstock data:",
         {
 
-            type:
-                "bar",
+            daily:
+                rainfallDailySeries.length,
 
-            data: {
+            monthly:
+                rainfallMonthlySeries.length,
 
-                labels:
-                    chartLabels,
-
-                datasets:
-                    datasets
-
-            },
-
-            options: {
-
-                responsive:
-                    true,
-
-                maintainAspectRatio:
-                    false,
-
-                interaction: {
-
-                    mode:
-                        "index",
-
-                    intersect:
-                        false
-
-                },
-
-                plugins: {
-
-                    title: {
-
-                        display:
-                            true,
-
-                        text:
-                            "Monthly Rainfall"
-
-                    },
-
-                    legend: {
-
-                        display:
-                            true,
-
-                        position:
-                            "top"
-
-                    },
-
-                    tooltip: {
-
-                        callbacks: {
-
-                            label:
-                                function(context) {
-
-                                    return (
-                                        context.dataset.label +
-                                        ": " +
-                                        Number(
-                                            context.raw
-                                        ).toFixed(2) +
-                                        " mm"
-                                    );
-
-                                }
-
-                        }
-
-                    }
-
-                },
-
-                scales: {
-
-                    x: {
-
-                        stacked:
-                            true,
-
-                        title: {
-
-                            display:
-                                true,
-
-                            text:
-                                "Month"
-
-                        }
-
-                    },
-
-                    y: {
-
-                        stacked:
-                            true,
-
-                        beginAtZero:
-                            true,
-
-                        title: {
-
-                            display:
-                                true,
-
-                            text:
-                                "Rainfall (mm)"
-
-                        }
-
-                    }
-
-                }
-
-            }
+            annual:
+                rainfallAnnualSeries.length
 
         }
     );
 
 
+    // --------------------------------------------------------
+    // Determine initial mode
+    // --------------------------------------------------------
+
+    const firstTime =
+        rainfallDailySeries.length > 0
+            ? rainfallDailySeries[0][0]
+            : null;
+
+
+    const lastTime =
+        rainfallDailySeries.length > 0
+            ? rainfallDailySeries[
+                rainfallDailySeries.length - 1
+              ][0]
+            : null;
+
+
+    rainfallCurrentMode =
+        getRainfallChartMode(
+            firstTime,
+            lastTime
+        );
+
+
     console.log(
-        "Stacked rainfall chart created."
+        "Initial rainfall chart mode:",
+        rainfallCurrentMode
+    );
+
+
+    // updateRainfallStatistics(
+    //     data
+    // );
+
+
+    // --------------------------------------------------------
+    // Destroy previous chart
+    // --------------------------------------------------------
+
+    if (
+        rainfallHighstock
+    ) {
+
+        try {
+
+            rainfallHighstock.destroy();
+
+        }
+        catch (error) {
+
+            console.warn(
+                "Could not destroy previous Highstock:",
+                error
+            );
+
+        }
+
+
+        rainfallHighstock =
+            null;
+    }
+
+
+    container.innerHTML =
+        "";
+
+
+    // --------------------------------------------------------
+    // Initial chart data
+    // --------------------------------------------------------
+
+    const initialSeries =
+        getRainfallSeriesForMode(
+            rainfallCurrentMode
+        );
+
+
+    // --------------------------------------------------------
+    // Initial extremes
+    // --------------------------------------------------------
+
+    const initialMin =
+        firstTime;
+
+
+    const initialMax =
+        lastTime;
+
+
+    // ========================================================
+    // CREATE HIGHSTOCK
+    // ========================================================
+
+    rainfallHighstock =
+        Highcharts.stockChart(
+            "rainfallChart",
+            {
+
+                chart: {
+
+                    height:
+                        620,
+
+                    backgroundColor:
+                        "#FFFFFF",
+
+                    spacingTop:
+                        10,
+
+                    spacingBottom:
+                        15,
+
+                    style: {
+
+                        fontFamily:
+                            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+
+                    },
+
+                    events: {
+
+                        load:
+                            function() {
+
+                                console.log(
+                                    "Highstock rainfall chart loaded."
+                                );
+
+                            }
+
+                    }
+
+                },
+
+
+                // ------------------------------------------------
+                // TITLE
+                // ------------------------------------------------
+
+                title: {
+
+                    text:
+                        null
+
+                },
+
+
+                // ------------------------------------------------
+                // SUBTITLE
+                // ------------------------------------------------
+
+                subtitle: {
+
+                    text:
+                        null
+
+                },
+
+
+                // ------------------------------------------------
+                // CREDITS
+                // ------------------------------------------------
+
+                credits: {
+
+                    enabled:
+                        false
+
+                },
+
+
+                // ------------------------------------------------
+                // RANGE SELECTOR
+                // ------------------------------------------------
+
+                rangeSelector: {
+
+                    selected:
+                        4,
+
+                    inputEnabled:
+                        true,
+
+                    buttons:
+                        [
+
+                            {
+                                type:
+                                    "month",
+
+                                count:
+                                    1,
+
+                                text:
+                                    "1M"
+                            },
+
+                            {
+                                type:
+                                    "month",
+
+                                count:
+                                    3,
+
+                                text:
+                                    "3M"
+                            },
+
+                            {
+                                type:
+                                    "month",
+
+                                count:
+                                    6,
+
+                                text:
+                                    "6M"
+                            },
+
+                            {
+                                type:
+                                    "year",
+
+                                count:
+                                    1,
+
+                                text:
+                                    "1Y"
+                            },
+
+                            {
+                                type:
+                                    "year",
+
+                                count:
+                                    3,
+
+                                text:
+                                    "3Y"
+                            },
+
+                            {
+                                type:
+                                    "year",
+
+                                count:
+                                    5,
+
+                                text:
+                                    "5Y"
+                            },
+
+                            {
+                                type:
+                                    "all",
+
+                                text:
+                                    "All"
+                            }
+
+                        ]
+
+                },
+
+
+                // ------------------------------------------------
+                // X AXIS
+                // ------------------------------------------------
+
+                xAxis: {
+
+                    type:
+                        "datetime",
+
+                    min:
+                        initialMin,
+
+                    max:
+                        initialMax,
+
+                    tickPixelInterval:
+                        80,
+
+                    events: {
+
+                        afterSetExtremes:
+                            function(e) {
+
+                                if (
+                                    !e ||
+                                    e.min === undefined ||
+                                    e.max === undefined
+                                ) {
+
+                                    return;
+                                }
+
+
+                                const min =
+                                    e.min;
+
+
+                                const max =
+                                    e.max;
+
+
+                                const mode =
+                                    getModeFromExtremes(
+                                        min,
+                                        max
+                                    );
+
+
+                                if (
+                                    mode !==
+                                    rainfallCurrentMode
+                                ) {
+
+                                    updateRainfallChartResolution(
+                                        mode
+                                    );
+
+                                }
+
+                            }
+
+                    },
+
+                    labels: {
+
+                        formatter:
+                            function() {
+
+                                const extremes =
+                                    this.chart
+                                        .xAxis[0]
+                                        .getExtremes();
+
+
+                                const days =
+                                    (
+                                        extremes.max -
+                                        extremes.min
+                                    ) /
+                                    RAINFALL_ONE_DAY;
+
+
+                                if (
+                                    days <=
+                                    RAINFALL_DAILY_THRESHOLD_DAYS
+                                ) {
+
+                                    return Highcharts.dateFormat(
+                                        "%d %b",
+                                        this.value
+                                    );
+                                }
+
+
+                                if (
+                                    days <=
+                                    RAINFALL_ANNUAL_THRESHOLD_DAYS
+                                ) {
+
+                                    return Highcharts.dateFormat(
+                                        "%b %Y",
+                                        this.value
+                                    );
+                                }
+
+
+                                return Highcharts.dateFormat(
+                                    "%Y",
+                                    this.value
+                                );
+
+                            }
+
+                    }
+
+                },
+
+
+                // ------------------------------------------------
+                // Y AXIS
+                // ------------------------------------------------
+
+                yAxis: {
+
+                    title: {
+
+                        text:
+                            "Rainfall (mm)"
+
+                    },
+
+                    min:
+                        0,
+
+                    opposite:
+                        false,
+
+                    labels: {
+
+                        formatter:
+                            function() {
+
+                                return Highcharts.numberFormat(
+                                    this.value,
+                                    0
+                                );
+
+                            }
+
+                    }
+
+                },
+
+
+                // ------------------------------------------------
+                // NAVIGATOR
+                // ------------------------------------------------
+
+                navigator: {
+
+                    enabled:
+                        true,
+
+                    height:
+                        70,
+
+                    margin:
+                        10,
+
+                    series: {
+
+                        type:
+                            "line",
+
+                        data:
+                            rainfallDailySeries,
+
+                        lineWidth:
+                            1,
+
+                        fillOpacity:
+                            0.08
+
+                    }
+
+                },
+
+
+                // ------------------------------------------------
+                // SCROLLBAR
+                // ------------------------------------------------
+
+                scrollbar: {
+
+                    enabled:
+                        true
+
+                },
+
+
+                // ------------------------------------------------
+                // TOOLTIP
+                // ------------------------------------------------
+
+                tooltip: {
+
+                    shared:
+                        false,
+
+                    valueDecimals:
+                        1,
+
+                    valueSuffix:
+                        " mm",
+
+                    xDateFormat:
+                        "%d %b %Y",
+
+                    formatter:
+                        function() {
+
+                            let dateFormat =
+                                "%d %b %Y";
+
+
+                            if (
+                                rainfallCurrentMode ===
+                                "month"
+                            ) {
+
+                                dateFormat =
+                                    "%b %Y";
+
+                            }
+
+
+                            if (
+                                rainfallCurrentMode ===
+                                "year"
+                            ) {
+
+                                dateFormat =
+                                    "%Y";
+                            }
+
+
+                            const value =
+                                this.y;
+
+
+                            if (
+                                value === null ||
+                                value === undefined
+                            ) {
+
+                                return `
+                                    <b>${Highcharts.dateFormat(
+                                        dateFormat,
+                                        this.x
+                                    )}</b>
+                                    <br>
+                                    No rainfall data
+                                `;
+                            }
+
+
+                            return `
+                                <b>${Highcharts.dateFormat(
+                                    dateFormat,
+                                    this.x
+                                )}</b>
+                                <br>
+                                Rainfall:
+                                <strong>
+                                    ${Highcharts.numberFormat(
+                                        value,
+                                        1
+                                    )} mm
+                                </strong>
+                            `;
+
+                        }
+
+                },
+
+
+                // ------------------------------------------------
+                // LEGEND
+                // ------------------------------------------------
+
+                legend: {
+
+                    enabled:
+                        false
+
+                },
+
+
+                // ------------------------------------------------
+                // PLOT OPTIONS
+                // ------------------------------------------------
+
+                plotOptions: {
+
+                    series: {
+
+                        animation:
+                            false,
+
+                        turboThreshold:
+                            0
+
+                    },
+
+                    column: {
+
+                        borderWidth:
+                            0,
+
+                        borderRadius:
+                            1,
+
+                        pointPadding:
+                            0.05,
+
+                        groupPadding:
+                            0.05
+
+                    }
+
+                },
+
+
+                // ------------------------------------------------
+                // SERIES
+                // ------------------------------------------------
+
+                series:
+                    [
+
+                        {
+
+                            name:
+                                getRainfallSeriesName(
+                                    rainfallCurrentMode
+                                ),
+
+                            type:
+                                "column",
+
+                            data:
+                                initialSeries,
+
+                            color:
+                                "#3E8FD0",
+
+                            borderRadius:
+                                1,
+
+                            tooltip: {
+
+                                valueSuffix:
+                                    " mm"
+
+                            }
+
+                        }
+
+                    ]
+
+            }
+        );
+
+
+    console.log(
+        "Highstock rainfall chart successfully created."
+    );
+
+
+    console.log(
+        "=============================================="
     );
 }
-function getRainfallYearColor(index) {
 
-    const colors = [
 
-        "#0077b6",
-        "#f4a261",
-        "#2a9d8f",
-        "#e76f51",
-        "#6a4c93",
-        "#8ab17d",
-        "#e9c46a",
-        "#264653"
+// ============================================================
+// UPDATE CHART RESOLUTION
+// ============================================================
+//
+// This is the important part.
+//
+// Highstock itself controls zoom.
+//
+// We switch the actual data source:
+//
+// daily  -> monthly -> annual
+//
+// according to visible date range.
+// ============================================================
 
-    ];
+function updateRainfallChartResolution(
+    mode
+) {
 
-    return colors[
-        index % colors.length
-    ];
+    if (
+        !rainfallHighstock
+    ) {
+
+        return;
+    }
+
+
+    if (
+        mode ===
+        rainfallCurrentMode
+    ) {
+
+        return;
+    }
+
+
+    console.log(
+        "Changing rainfall chart resolution:",
+        rainfallCurrentMode,
+        "→",
+        mode
+    );
+
+
+    rainfallCurrentMode =
+        mode;
+
+
+    const newData =
+        getRainfallSeriesForMode(
+            mode
+        );
+
+
+    if (
+        !Array.isArray(
+            newData
+        )
+    ) {
+
+        return;
+    }
+
+
+    const series =
+        rainfallHighstock.series[0];
+
+
+    if (
+        !series
+    ) {
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // Preserve visible range
+    // --------------------------------------------------------
+
+    const axis =
+        rainfallHighstock.xAxis[0];
+
+
+    const oldMin =
+        axis.min;
+
+
+    const oldMax =
+        axis.max;
+
+
+    // --------------------------------------------------------
+    // Update series
+    // --------------------------------------------------------
+
+    series.update(
+        {
+
+            name:
+                getRainfallSeriesName(
+                    mode
+                ),
+
+            type:
+                "column",
+
+            data:
+                newData,
+
+            color:
+                "#3E8FD0",
+
+            tooltip: {
+
+                valueSuffix:
+                    " mm"
+
+            }
+
+        },
+        false
+    );
+
+
+    // --------------------------------------------------------
+    // Recalculate axis
+    // --------------------------------------------------------
+
+    rainfallHighstock.redraw(
+        false
+    );
+
+
+    // --------------------------------------------------------
+    // Restore reasonable visible range
+    //
+    // Highstock data has different timestamps:
+    //
+    // daily:
+    //     actual date
+    //
+    // monthly:
+    //     first day of month
+    //
+    // annual:
+    //     first day of year
+    // --------------------------------------------------------
+
+    if (
+        oldMin !== undefined &&
+        oldMax !== undefined
+    ) {
+
+        const dataExtremes =
+            rainfallHighstock
+                .xAxis[0]
+                .getExtremes();
+
+
+        let newMin =
+            oldMin;
+
+
+        let newMax =
+            oldMax;
+
+
+        if (
+            newMin <
+            dataExtremes.dataMin
+        ) {
+
+            newMin =
+                dataExtremes.dataMin;
+        }
+
+
+        if (
+            newMax >
+            dataExtremes.dataMax
+        ) {
+
+            newMax =
+                dataExtremes.dataMax;
+        }
+
+
+        if (
+            newMin < newMax
+        ) {
+
+            rainfallHighstock
+                .xAxis[0]
+                .setExtremes(
+                    newMin,
+                    newMax,
+                    true,
+                    false
+                );
+
+        } else {
+
+            rainfallHighstock.redraw();
+
+        }
+
+    } else {
+
+        rainfallHighstock.redraw();
+
+    }
+
+
+    updateRainfallModeMessage(
+        mode
+    );
+
+
+    console.log(
+        "Rainfall chart resolution updated:",
+        mode,
+        "points:",
+        newData.length
+    );
 }
-// ---------------------------------------------
+
+
 // ============================================================
 // DESTROY CHART
 // ============================================================
-//
-// No Chart.js instance exists anymore.
-// Just clear the container.
-// ============================================================
 
 function destroyRainfallChart() {
+
+    if (
+        rainfallHighstock
+    ) {
+
+        try {
+
+            rainfallHighstock.destroy();
+
+        }
+        catch (error) {
+
+            console.warn(
+                "Error destroying rainfall chart:",
+                error
+            );
+
+        }
+
+
+        rainfallHighstock =
+            null;
+    }
+
 
     const container =
         document.getElementById(
@@ -2630,8 +3880,21 @@ function destroyRainfallChart() {
         container
     ) {
 
-        container.innerHTML = "";
+        container.innerHTML =
+            "";
     }
+
+
+    rainfallDailySeries =
+        [];
+
+
+    rainfallMonthlySeries =
+        [];
+
+
+    rainfallAnnualSeries =
+        [];
 }
 
 
@@ -2664,7 +3927,7 @@ function setSuccessMessage(
     ) {
 
         timeseriesMessageElement.textContent =
-            `Daily rainfall records: ${recordCount}`;
+            `Rainfall data loaded • ${recordCount.toLocaleString()} daily records`;
     }
 }
 
@@ -2688,7 +3951,7 @@ function setErrorMessage(
 
 
 // ============================================================
-// LOAD RAINFALL
+// LOAD VILLAGE RAINFALL
 // ============================================================
 
 async function loadVillageRainfall(
@@ -2701,24 +3964,29 @@ async function loadVillageRainfall(
         "=============================================="
     );
 
+
     console.log(
         "CALLING RAINFALL API"
     );
+
 
     console.log(
         "Village ID:",
         villageId
     );
 
+
     console.log(
         "Start:",
         startDate
     );
 
+
     console.log(
         "End:",
         endDate
     );
+
 
     console.log(
         "=============================================="
@@ -2771,7 +4039,7 @@ async function loadVillageRainfall(
 
 
     // --------------------------------------------------------
-    // URL
+    // Build URL
     // --------------------------------------------------------
 
     const params =
@@ -2780,7 +4048,9 @@ async function loadVillageRainfall(
 
     params.set(
         "village_id",
-        String(villageId)
+        String(
+            villageId
+        )
     );
 
 
@@ -2815,6 +4085,7 @@ async function loadVillageRainfall(
             await fetch(
                 url,
                 {
+
                     method:
                         "GET",
 
@@ -2823,6 +4094,7 @@ async function loadVillageRainfall(
 
                     cache:
                         "no-store"
+
                 }
             );
 
@@ -2867,6 +4139,7 @@ async function loadVillageRainfall(
         console.log(
             "Rainfall API returned:",
             {
+
                 gridCount:
                     Array.isArray(result.grid)
                         ? result.grid.length
@@ -2876,12 +4149,13 @@ async function loadVillageRainfall(
                     Array.isArray(result.data)
                         ? result.data.length
                         : 0
+
             }
         );
 
 
         // ----------------------------------------------------
-        // Validate API
+        // API error
         // ----------------------------------------------------
 
         if (
@@ -2906,9 +4180,9 @@ async function loadVillageRainfall(
         }
 
 
-        // ----------------------------------------------------
+        // ====================================================
         // GRID
-        // ----------------------------------------------------
+        // ====================================================
 
         if (
             Array.isArray(
@@ -2926,10 +4200,6 @@ async function loadVillageRainfall(
                 result.grid.length
             );
 
-            console.log(
-                "ACTUAL GRID:",
-                JSON.stringify(result.grid, null, 2)
-            );
 
             displayGridInformation(
                 selectedGrid
@@ -2952,65 +4222,134 @@ async function loadVillageRainfall(
         }
 
 
-        // ----------------------------------------------------
+        // ====================================================
         // DAILY DATA
-        // ----------------------------------------------------
+        // ====================================================
 
         rainfallData =
             result.data;
 
-            console.log(
-                "First 10 rainfall records:",
-                rainfallData.slice(0, 10)
-            );
-            
-            console.log(
-                "Last 10 rainfall records:",
-                rainfallData.slice(-10)
-            );
-            
-            console.log(
-                "Rainfall values:",
-                rainfallData.map(
-                    item => Number(item.rainfall)
-                ).filter(
-                    value => Number.isFinite(value)
-                )
-            );
+
         console.log(
             "Daily records:",
             rainfallData.length
         );
+
+
+        // ----------------------------------------------------
+        // Debug first / last values
+        // ----------------------------------------------------
+
+        console.log(
+            "First 10 rainfall records:",
+            rainfallData.slice(
+                0,
+                10
+            )
+        );
+
+
+        console.log(
+            "Last 10 rainfall records:",
+            rainfallData.slice(
+                -10
+            )
+        );
+
+
+        // ----------------------------------------------------
+        // Find valid values
+        // ----------------------------------------------------
+
+        const validValues =
+            rainfallData
+                .map(
+                    function(item) {
+
+                        return parseRainfall(
+                            item.rainfall
+                        );
+
+                    }
+                )
+                .filter(
+                    function(value) {
+
+                        return value !== null;
+
+                    }
+                );
+
+
+        console.log(
+            "Valid rainfall values:",
+            validValues.length
+        );
+
+
+        // ----------------------------------------------------
+        // December debug
+        // ----------------------------------------------------
+
         const decemberRecords =
-    rainfallData.filter(
-        item =>
-            String(item.date).startsWith("2023-12")
-    );
+            rainfallData.filter(
+                function(item) {
 
-console.log(
-    "DECEMBER RECORDS:",
-    decemberRecords
-);
+                    return String(
+                        item.date
+                    ).startsWith(
+                        "2023-12"
+                    );
 
-console.log(
-    "DECEMBER TOTAL:",
-    decemberRecords.reduce(
-        (sum, item) =>
-            sum + (
-                Number(item.rainfall) || 0
-            ),
-        0
-    )
-);
+                }
+            );
+
+
+        console.log(
+            "DECEMBER RECORDS:",
+            decemberRecords
+        );
+
+
+        console.log(
+            "DECEMBER TOTAL:",
+            decemberRecords.reduce(
+                function(
+                    sum,
+                    item
+                ) {
+
+                    const value =
+                        parseRainfall(
+                            item.rainfall
+                        );
+
+
+                    return sum +
+                        (
+                            value === null
+                                ? 0
+                                : value
+                        );
+
+                },
+                0
+            )
+        );
+
+
+        // ====================================================
+        // SUCCESS
+        // ====================================================
 
         setSuccessMessage(
             rainfallData.length
         );
 
 
-        // ----------------------------------------------------
+        // ====================================================
         // CHART
-        // ----------------------------------------------------
+        // ====================================================
 
         drawRainfallChart(
             rainfallData
@@ -3020,7 +4359,6 @@ console.log(
         console.log(
             "Rainfall processing complete."
         );
-
 
     }
     catch (error) {
@@ -3047,6 +4385,9 @@ console.log(
         setErrorMessage(
             "Unable to load rainfall data."
         );
+
+
+        destroyRainfallChart();
     }
     finally {
 
@@ -3061,14 +4402,10 @@ console.log(
 //
 // location_filter.js calls this function.
 //
-// Example data:
-//
-// {
-//     type: "FeatureCollection",
-//     village_id: 48915,
-//     features: [...]
-//
-// }
+// IMPORTANT
+// ------------------------------------------------------------
+// No districtSelect / talukaSelect / villageSelect variables
+// are declared here.
 // ============================================================
 
 async function onVillageSelected(
@@ -3079,13 +4416,16 @@ async function onVillageSelected(
         "=============================================="
     );
 
+
     console.log(
         "onVillageSelected()"
     );
 
+
     console.log(
         data
     );
+
 
     console.log(
         "=============================================="
@@ -3117,7 +4457,8 @@ async function onVillageSelected(
     destroyRainfallChart();
 
 
-    rainfallData = [];
+    rainfallData =
+        [];
 
 
     // --------------------------------------------------------
@@ -3143,16 +4484,15 @@ async function onVillageSelected(
     }
 
 
-    // --------------------------------------------------------
-    // Village ID
-    // --------------------------------------------------------
+    // ========================================================
+    // VILLAGE ID
+    // ========================================================
 
     selectedVillageId =
         extractVillageId(
             data
         );
-    
-    
+
 
     console.log(
         "Village ID:",
@@ -3172,22 +4512,23 @@ async function onVillageSelected(
     }
 
 
-    // --------------------------------------------------------
-    // Village boundary
-    // --------------------------------------------------------
+    // ========================================================
+    // VILLAGE BOUNDARY
+    // ========================================================
 
     drawVillageBoundary(
         data
     );
 
 
-    // --------------------------------------------------------
-    // Village name
+    // ========================================================
+    // VILLAGE NAME
     //
     // IMPORTANT:
-    // We do NOT declare villageSelect here.
-    // location_filter.js already owns it.
-    // --------------------------------------------------------
+    // We access the DOM directly.
+    //
+    // We do NOT declare villageSelect.
+    // ========================================================
 
     let villageName =
         "Selected Village";
@@ -3223,9 +4564,9 @@ async function onVillageSelected(
         villageName;
 
 
-    // --------------------------------------------------------
-    // Coordinates
-    // --------------------------------------------------------
+    // ========================================================
+    // COORDINATES
+    // ========================================================
 
     const coordinates =
         extractVillageCoordinates(
@@ -3256,18 +4597,20 @@ async function onVillageSelected(
     console.log(
         "Village coordinates:",
         {
+
             latitude:
                 selectedLatitude,
 
             longitude:
                 selectedLongitude
+
         }
     );
 
 
-    // --------------------------------------------------------
-    // Marker
-    // --------------------------------------------------------
+    // ========================================================
+    // MARKER
+    // ========================================================
 
     drawVillageMarker(
         selectedLatitude,
@@ -3276,26 +4619,32 @@ async function onVillageSelected(
     );
 
 
-    // --------------------------------------------------------
-    // Zoom
-    // --------------------------------------------------------
+    // ========================================================
+    // ZOOM TO VILLAGE
+    // ========================================================
 
-    rainfallMap.setView(
-        [
-            selectedLatitude,
-            selectedLongitude
-        ],
-        12,
-        {
-            animate:
-                false
-        }
-    );
+    if (
+        rainfallMap
+    ) {
+
+        rainfallMap.setView(
+            [
+                selectedLatitude,
+                selectedLongitude
+            ],
+            12,
+            {
+                animate:
+                    false
+            }
+        );
+
+    }
 
 
-    // --------------------------------------------------------
-    // Dates
-    // --------------------------------------------------------
+    // ========================================================
+    // DATES
+    // ========================================================
 
     const dateRange =
         getSelectedDateRange();
@@ -3313,9 +4662,9 @@ async function onVillageSelected(
     }
 
 
-    // --------------------------------------------------------
-    // API
-    // --------------------------------------------------------
+    // ========================================================
+    // LOAD API
+    // ========================================================
 
     await loadVillageRainfall(
         selectedVillageId,
@@ -3328,8 +4677,7 @@ async function onVillageSelected(
 // ============================================================
 // DATE CHANGE
 //
-// When the user changes Start Date / End Date,
-// reload rainfall only if a village is already selected.
+// Reload only if village is selected.
 // ============================================================
 
 function handleDateChange() {
@@ -3337,6 +4685,10 @@ function handleDateChange() {
     if (
         !selectedVillageId
     ) {
+
+        console.log(
+            "Date changed but no village selected."
+        );
 
         return;
     }
@@ -3350,8 +4702,17 @@ function handleDateChange() {
         !range
     ) {
 
+        console.warn(
+            "Invalid selected date range."
+        );
+
         return;
     }
+
+
+    console.log(
+        "Date changed. Reloading rainfall..."
+    );
 
 
     loadVillageRainfall(
@@ -3361,6 +4722,10 @@ function handleDateChange() {
     );
 }
 
+
+// ============================================================
+// START DATE CHANGE
+// ============================================================
 
 if (
     startDateElement
@@ -3372,6 +4737,10 @@ if (
     );
 }
 
+
+// ============================================================
+// END DATE CHANGE
+// ============================================================
 
 if (
     endDateElement
@@ -3394,7 +4763,7 @@ if (
 
     gridCheckElement.addEventListener(
         "change",
-        function () {
+        function() {
 
             if (
                 !rainfallGridLayer
@@ -3433,6 +4802,15 @@ if (
 
                 villageBoundaryLayer.bringToFront();
             }
+
+
+            if (
+                villageMarker
+            ) {
+
+                villageMarker.bringToFront();
+            }
+
         }
     );
 }
@@ -3441,9 +4819,8 @@ if (
 // ============================================================
 // RAINFALL CHECKBOX
 //
-// Currently the API returns rainfall values for the selected
-// grid, but the actual rainfall surface is not rendered here.
-// Keep this handler harmless.
+// Currently there is no separate rainfall surface returned
+// by the API. Keep the checkbox harmless.
 // ============================================================
 
 if (
@@ -3452,7 +4829,7 @@ if (
 
     rainfallCheckElement.addEventListener(
         "change",
-        function () {
+        function() {
 
             console.log(
                 "Rainfall layer:",
@@ -3467,40 +4844,105 @@ if (
 
 
 // ============================================================
-// INITIAL STATE
+// LEGEND TOGGLE
+//
+// Supports the existing HTML:
+//
+// #legendToggle
+// #legendContent
 // ============================================================
 
+const legendToggleElement =
+    document.getElementById(
+        "legendToggle"
+    );
+
+
+const legendContentElement =
+    document.getElementById(
+        "legendContent"
+    );
+
+
 if (
-    startDateElement &&
-    !startDateElement.value
+    legendToggleElement &&
+    legendContentElement
 ) {
 
-    startDateElement.value =
-        "2023-01-01";
+    legendToggleElement.addEventListener(
+        "click",
+        function() {
+
+            const hidden =
+                legendContentElement.style.display ===
+                "none";
+
+
+            if (
+                hidden
+            ) {
+
+                legendContentElement.style.display =
+                    "block";
+
+                this.textContent =
+                    "−";
+
+            } else {
+
+                legendContentElement.style.display =
+                    "none";
+
+                this.textContent =
+                    "+";
+
+            }
+
+        }
+    );
 }
 
 
-if (
-    endDateElement &&
-    !endDateElement.value
-) {
+// ============================================================
+// INITIAL DATE STATE
+// ============================================================
+//
+// Do NOT force 2023 dates here.
+//
+// The database API will set the actual min/max dates.
+// ============================================================
 
-    endDateElement.value =
-        "2023-12-31";
-}
+
+// ============================================================
+// LOAD DB DATE RANGE
+// ============================================================
 
 loadRainfallDateRange();
+
+
+// ============================================================
+// INITIALIZATION COMPLETE
+// ============================================================
+
 console.log(
     "=============================================="
 );
+
 
 console.log(
     "rainfall_nc.js initialization complete."
 );
 
+
 console.log(
-    "Chart.js is NOT used."
+    "Highstock is used."
 );
+
+
+console.log(
+    "Chart.js is NOT used by rainfall_nc.js."
+);
+
 
 console.log(
     "=============================================="

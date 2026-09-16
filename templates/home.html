@@ -287,7 +287,118 @@ font-size:35px;
 
 }
 
+/* =========================================================
+   COMING SOON LAYER
+   ========================================================= */
 
+.layer.coming-soon {
+    position: relative;
+
+    /* Keep the same overall shape as other layer buttons */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    /* Disabled appearance */
+    background: #f3f5f7;
+    color: #8a8f94;
+
+    border: 1px solid #edf0f2;
+
+    opacity: 0.85;
+
+    cursor: not-allowed;
+
+    /* Prevent selection */
+    user-select: none;
+
+    /* Slightly softer than active layers */
+    box-shadow: none;
+
+    transition: all 0.2s ease;
+}
+
+
+/* Temperature text */
+.layer.coming-soon .layer-name {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    color: #858b91;
+
+    font-weight: 400;
+}
+
+
+/* Coming Soon badge */
+.layer.coming-soon .coming-soon-badge {
+    flex-shrink: 0;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 4px 9px;
+
+    border-radius: 12px;
+
+    background: #e9ecef;
+
+    border: 1px solid #dfe3e6;
+
+    color: #92979c;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    line-height: 1;
+
+    white-space: nowrap;
+
+    letter-spacing: 0.1px;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .layer.coming-soon {
+        gap: 6px;
+    }
+
+    .layer.coming-soon .layer-name {
+        font-size: 14px;
+    }
+
+    .layer.coming-soon .coming-soon-badge {
+        padding: 4px 7px;
+        font-size: 9px;
+    }
+}
+
+
+/* =========================================================
+   VERY SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+    .layer.coming-soon .layer-name {
+        font-size: 13px;
+    }
+
+    .layer.coming-soon .coming-soon-badge {
+        padding: 3px 6px;
+        font-size: 8px;
+    }
+}
 
 
 /* =========================
@@ -380,11 +491,12 @@ Interactive Spatial Explorer
 
     <div class="sidebar">
         <h3>Map Layers</h3>
-        <div class="layer" role="button" tabindex="0" onclick="window.location='/temperature/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/temperature/';}">
+        <!-- <div class="layer" role="button" tabindex="0" onclick="window.location='/temperature/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/temperature/';}">
             
             🌡️ Temperature
     
-            </div>
+            </div> -->
+        
         <div class="layer" role="button" tabindex="0" onclick="window.location='/precipitation-gridded-nc/'" onkeydown="if(event.key==='Enter' || event.key===' '){ window.location='/precipitation-gridded-nc/';}">
             
         🌧 Rainfall
@@ -412,8 +524,12 @@ Interactive Spatial Explorer
 
             ⛰️ Landslide
         </div>
-        <hr>
-        <h4>Meet Our Team</h4>
+        <div class="layer coming-soon" aria-disabled="true">
+            <span> Temperature</span>
+            <span class="coming-soon-badge">Coming Soon</span>
+        </div>
+        <!-- <hr>
+        <h4>Meet Our Team</h4> -->
 
     </div>
 
@@ -541,7 +657,7 @@ Research Domains
 
 
 
-    <a href="/temperature/"
+    <!-- <a href="/temperature/"
     class="card"
     style="text-decoration:none;color:inherit">
     
@@ -556,13 +672,13 @@ Research Domains
     Extreme temperature variations
     
     
-    </p>
-    <b>
+    </p> -->
+    <!-- <b> -->
         <!-- Open Tool → -->
-        </b>
+        <!-- </b>
         
         
-        </a>
+        </a> -->
 
 
 

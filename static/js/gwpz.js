@@ -61,16 +61,24 @@ map.on("mousemove", function (e) {
 // OSM BASE MAP
 // ============================================================
 
-baseLayer = L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+// baseLayer = L.tileLayer(
+//     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+//     {
+//         attribution: "&copy; OpenStreetMap contributors",
+//         opacity: 0.8,
+//         maxZoom: 19,
+//         crossOrigin: true
+//     }
+// ).addTo(map);
+baseLayer =L.tileLayer(
+    "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
     {
-        attribution: "&copy; OpenStreetMap contributors",
-        opacity: 0.8,
         maxZoom: 19,
-        crossOrigin: true
+        crossOrigin: true,
+        // opacity: 0.8,
+        attribution: "&copy; Google"
     }
 ).addTo(map);
-
 
 // ============================================================
 // GWPZ TILE LAYER
@@ -1060,19 +1068,27 @@ async function captureMapCanvas() {
         // ----------------------------------------------------
 
         const exportBase =
-            L.tileLayer(
-                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {
-                    maxZoom: 19,
-                    crossOrigin: true,
-                    attribution:
-                        "&copy; OpenStreetMap contributors"
-                }
-            );
+        //     L.tileLayer(
+        //         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        //         {
+        //             maxZoom: 19,
+        //             crossOrigin: true,
+        //             attribution:
+        //                 "&copy; OpenStreetMap contributors"
+        //         }
+        //     );
 
 
-        exportBase.addTo(exportMap);
-
+        // exportBase.addTo(exportMap);
+        L.tileLayer(
+            "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+            {
+                maxZoom: 19,
+                crossOrigin: true,
+                // opacity: 0.8,
+                attribution: "&copy; Google"
+            }
+        ).addTo(map);
 
         // ----------------------------------------------------
         // GWPZ

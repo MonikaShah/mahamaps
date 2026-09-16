@@ -12,14 +12,22 @@ const map = L.map("map", {
 // Google Satellite
 // ======================================
 
-L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+// L.tileLayer(
+//     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 
-{
-attribution:'OpenStreetMap',
-opacity: 0.8,
-}
+// {
+// attribution:'OpenStreetMap',
+// opacity: 0.8,
+// }
+// ).addTo(map);
+L.tileLayer(
+    "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    {
+        maxZoom: 19,
+        attribution: "&copy; Google"
+    }
 ).addTo(map);
+
 
 
 // ======================================

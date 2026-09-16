@@ -242,18 +242,24 @@ function initializeRainfallMap() {
     // OpenStreetMap
     // --------------------------------------------------------
 
+    // L.tileLayer(
+    //     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    //     {
+    //         maxZoom: 18,
+
+    //         attribution:
+    //             "&copy; OpenStreetMap contributors"
+    //     }
+    // ).addTo(
+    //     rainfallMap
+    // );
     L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
         {
-            maxZoom: 18,
-
-            attribution:
-                "&copy; OpenStreetMap contributors"
+            maxZoom: 19,
+            attribution: "&copy; Google"
         }
-    ).addTo(
-        rainfallMap
-    );
-
+    ).addTo(rainfallMap);
 
     // --------------------------------------------------------
     // State boundary WMS
@@ -298,7 +304,7 @@ function initializeRainfallMap() {
             19.7515,
             75.7139
         ],
-        6
+        7
     );
 
 

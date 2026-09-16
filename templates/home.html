@@ -752,15 +752,25 @@ var map = L.map('map').setView(
 5
 );
 
+// L.tileLayer(
+
+// 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+// {
+// attribution:'OpenStreetMap'
+// }
+
+// ).addTo(map);
+
 L.tileLayer(
-
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-
-{
-attribution:'OpenStreetMap'
-}
-
-).addTo(map);
+            "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+            {
+                maxZoom: 19,
+                crossOrigin: true,
+                // opacity: 0.8,
+                attribution: "&copy; Google"
+            }
+        ).addTo(map);
 
 
 var statesWMS = L.tileLayer.wms(

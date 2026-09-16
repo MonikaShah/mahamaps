@@ -1,0 +1,79 @@
+<div class="sidebar">
+
+    <h3>Map Layers</h3>
+
+
+    {# RAINFALL #}
+    {% if active_layer == "rainfall" %}
+
+        {% include "includes/layers/rainfall.html" %}
+
+    {% else %}
+
+        <a href="/precipitation-gridded-nc/" class="layer">
+            🌧 Rainfall
+        </a>
+
+    {% endif %}
+
+
+    {# FOREST FIRE #}
+    {% if active_layer == "forestfire" %}
+
+        {% include "includes/layers/forestfire.html" %}
+
+    {% else %}
+
+        <a href="/ff/" class="layer">
+            🔥 Forest Fire
+        </a>
+
+    {% endif %}
+
+
+    {# GWPZ #}
+    {% if active_layer == "gwpz" %}
+
+        {% include "includes/layers/gwpz_layers.html" %}
+
+    {% else %}
+
+        <a href="/gwpz/" class="layer">
+            💧 Ground Water Priority Zone
+        </a>
+
+    {% endif %}
+
+
+    {# LANDSLIDE #}
+    {% if active_layer == "landslide" %}
+
+        {% include "includes/layers/landslide.html" %}
+
+    {% else %}
+
+        <a href="/landslide/" class="layer">
+            ⛰️ Landslide
+        </a>
+
+    {% endif %}
+
+    <!-- {# TEMPERATURE #}
+    {% if active_layer == "temperature" %}
+
+        {% include "includes/layers/temperature.html" %}
+
+    {% else %}
+
+        <a href="/temperature/" class="layer">
+            🌡️ Temperature
+        </a>
+
+    {% endif %}
+    <hr>
+
+    <a href="/about-team/" class="layer">
+        👥 Meet Our Team
+    </a> -->
+
+</div>
